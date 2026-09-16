@@ -13,6 +13,21 @@ return [
     | a conventional file to locate the various service credentials.
     |
     */
+    'ai' => [
+    'provider' => env('AI_PROVIDER', 'openai'),
+],
+'widget' => [
+    'token' => env('WIDGET_TOKEN'),
+],
+'openai' => [
+    'api_key' => env('OPENAI_API_KEY'),
+    'model' => env('OPENAI_MODEL', 'gpt-4.1-mini'),
+],
+
+'anthropic' => [
+    'api_key' => env('ANTHROPIC_API_KEY'),
+    'model' => env('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514'),
+],
 
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),

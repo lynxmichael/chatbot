@@ -4,8 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Models\Ticket;
 
 class User extends Authenticatable
 {
@@ -17,7 +19,10 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'skills',
         'is_active',
+        'is_available',
+        'max_open_tickets',
         'last_login_at',
     ];
 
@@ -32,6 +37,9 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'is_available' => 'boolean',
+            'skills' => 'array',
+            'max_open_tickets' => 'integer',
             'last_login_at' => 'datetime',
         ];
     }
@@ -40,4 +48,26 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Organization::class);
     }
+
+    /**
+     * Conversations attribuées à cet agent.
+     */
+    public function assignedConversations(): HasMany
+    {
+        return $this->hasMany(
+            Conversation::class,
+            'assigned_to'
+        );
+    }
+    public function calls(): HasMany
+{
+    return $this->hasMany(Call::class);
+}
+public function assignedTickets()
+{
+    return $this->hasMany(
+        Ticket::class,
+        'assigned_to'
+    );
+}
 }

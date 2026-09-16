@@ -1,9 +1,25 @@
 <?php
 
+use App\Http\Controllers\AgentController;
+use App\Http\Controllers\AiController;
+use App\Http\Controllers\AutopilotController;
+use App\Http\Controllers\CallDeskController;
+use App\Http\Controllers\CallController;
+use App\Http\Controllers\ClientController;
+use App\Http\Controllers\ConversationController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\TicketController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+
+/*
+|--------------------------------------------------------------------------
+| Page d'accueil
+|--------------------------------------------------------------------------
+*/
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -14,14 +30,191 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+/*
+|--------------------------------------------------------------------------
+| Page de test du widget
+|--------------------------------------------------------------------------
+|
+| Les routes API du widget sont déclarées uniquement dans routes/api.php.
+| Elles doivent rester hors du middleware « web » pour être appelables
+| depuis un site tiers sans jeton CSRF.
+|
+*/
 
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+Route::get('/widget-test', function () {
+    return view('widget-test');
+})->name('widget.test');
+
+/*
+|--------------------------------------------------------------------------
+| Espace authentifié
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth', 'verified'])->group(function () {
+
+    /*
+    |--------------------------------------------------------------------------
+    | Tableau de bord
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/dashboard', [DashboardController::class, 'index'])
+        ->name('dashboard');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Clients
+    |--------------------------------------------------------------------------
+    */
+
+    Route::resource('clients', ClientController::class);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Agents
+    |--------------------------------------------------------------------------
+    */
+
+    Route::resource('agents', AgentController::class)
+        ->except(['show']);
+
+    Route::patch('/agents/{agent}/toggle', [AgentController::class, 'toggle'])
+        ->name('agents.toggle');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Appels
+    |--------------------------------------------------------------------------
+    */
+
+    Route::resource('calls', CallController::class);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Tickets / Réclamations
+    |--------------------------------------------------------------------------
+    */
+
+    Route::resource('tickets', TicketController::class);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Conversations
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/conversations', [ConversationController::class, 'index'])
+        ->name('conversations.index');
+
+    Route::patch('/conversations/{conversation}', [ConversationController::class, 'update'])
+        ->name('conversations.update');
+
+    Route::post('/conversations/{conversation}/messages', [ConversationController::class, 'store'])
+        ->name('conversations.messages.store');
+
+    Route::post('/conversations/{conversation}/ai-test', [AiController::class, 'test'])
+        ->name('conversations.ai-test');
+
+    Route::get('/conversations/{conversation}', [ConversationController::class, 'show'])
+        ->name('conversations.show');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Poste téléphonique de l'agent
+    |--------------------------------------------------------------------------
+    |
+    | Interrogées en boucle par la console pour faire sonner le poste.
+    |
+    */
+
+    Route::prefix('call-desk')->name('call-desk.')->group(function () {
+
+        Route::get('/incoming', [CallDeskController::class, 'incoming'])
+            ->name('incoming');
+
+        Route::post('/{call}/accept', [CallDeskController::class, 'accept'])
+            ->name('accept');
+
+        Route::post('/{call}/decline', [CallDeskController::class, 'decline'])
+            ->name('decline');
+
+        Route::post('/{call}/hang-up', [CallDeskController::class, 'hangUp'])
+            ->name('hang-up');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Autopilot IA
+    |--------------------------------------------------------------------------
+    |
+    | Réservé au propriétaire de l'organisation : c'est ici que se règle
+    | ce que l'IA a le droit de faire, que se valident ses actions et que
+    | se consultent les alertes de supervision.
+    |
+    */
+
+    Route::prefix('autopilot')->name('autopilot.')->group(function () {
+
+        Route::get('/', [AutopilotController::class, 'index'])
+            ->name('index');
+
+        Route::patch('/', [AutopilotController::class, 'update'])
+            ->name('update');
+
+        Route::get('/approvals', [AutopilotController::class, 'approvals'])
+            ->name('approvals');
+
+        Route::post('/approvals/{action}/approve', [AutopilotController::class, 'approve'])
+            ->name('approvals.approve');
+
+        Route::post('/approvals/{action}/reject', [AutopilotController::class, 'reject'])
+            ->name('approvals.reject');
+
+        Route::get('/insights', [AutopilotController::class, 'insights'])
+            ->name('insights');
+
+        Route::post('/insights/{insight}/acknowledge', [AutopilotController::class, 'acknowledgeInsight'])
+            ->name('insights.acknowledge');
+
+        Route::post('/insights/{insight}/resolve', [AutopilotController::class, 'resolveInsight'])
+            ->name('insights.resolve');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Notifications
+    |--------------------------------------------------------------------------
+    */
+
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'read'])
+        ->name('notifications.read');
+
+    Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])
+        ->name('notifications.read-all');
 });
 
-require __DIR__.'/auth.php';
+/*
+|--------------------------------------------------------------------------
+| Profil utilisateur
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])
+        ->name('profile.edit');
+
+    Route::patch('/profile', [ProfileController::class, 'update'])
+        ->name('profile.update');
+
+    Route::delete('/profile', [ProfileController::class, 'destroy'])
+        ->name('profile.destroy');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Authentification Breeze
+|--------------------------------------------------------------------------
+*/
+
+require __DIR__ . '/auth.php';

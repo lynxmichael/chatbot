@@ -1,0 +1,198 @@
+<script setup>
+import { Head, Link, useForm } from "@inertiajs/vue3";
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+
+const props = defineProps({
+  client: {
+    type: Object,
+    required: true,
+  },
+});
+
+const form = useForm({
+  first_name: props.client.first_name,
+  last_name: props.client.last_name,
+  email: props.client.email || "",
+  phone: props.client.phone || "",
+  company: props.client.company || "",
+  address: props.client.address || "",
+  city: props.client.city || "",
+  country: props.client.country || "",
+  status: props.client.status || "active",
+  notes: props.client.notes || "",
+});
+
+const submit = () => {
+  form.put(route("clients.update", props.client.id));
+};
+</script>
+
+<template>
+  <Head title="Modifier le client" />
+
+  <AuthenticatedLayout>
+    <template #header>
+      <h2 class="text-xl font-semibold text-gray-800">Modifier le client</h2>
+    </template>
+
+    <div class="py-8">
+      <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+        <div class="rounded-lg bg-white p-6 shadow">
+          <form @submit.prevent="submit" class="space-y-6">
+            <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div>
+                <label class="block text-sm font-medium text-gray-700">
+                  Prénom *
+                </label>
+
+                <input
+                  v-model="form.first_name"
+                  type="text"
+                  required
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                />
+
+                <p
+                  v-if="form.errors.first_name"
+                  class="mt-1 text-sm text-red-600"
+                >
+                  {{ form.errors.first_name }}
+                </p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700">
+                  Nom *
+                </label>
+
+                <input
+                  v-model="form.last_name"
+                  type="text"
+                  required
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700">
+                  Téléphone *
+                </label>
+
+                <input
+                  v-model="form.phone"
+                  type="tel"
+                  required
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700">
+                  Email
+                </label>
+
+                <input
+                  v-model="form.email"
+                  type="email"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700">
+                  Entreprise
+                </label>
+
+                <input
+                  v-model="form.company"
+                  type="text"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700">
+                  Ville
+                </label>
+
+                <input
+                  v-model="form.city"
+                  type="text"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700">
+                  Pays
+                </label>
+
+                <input
+                  v-model="form.country"
+                  type="text"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700">
+                  Statut
+                </label>
+
+                <select
+                  v-model="form.status"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                >
+                  <option value="active">Actif</option>
+                  <option value="inactive">Inactif</option>
+                  <option value="blocked">Bloqué</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700">
+                Adresse
+              </label>
+
+              <input
+                v-model="form.address"
+                type="text"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700">
+                Notes
+              </label>
+
+              <textarea
+                v-model="form.notes"
+                rows="4"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+              ></textarea>
+            </div>
+
+            <div class="flex justify-end gap-3 border-t pt-6">
+              <Link
+                :href="route('clients.index')"
+                class="rounded-md border border-gray-300 px-4 py-2"
+              >
+                Annuler
+              </Link>
+
+              <button
+                type="submit"
+                :disabled="form.processing"
+                class="rounded-md bg-indigo-600 px-4 py-2 font-semibold text-white disabled:opacity-50"
+              >
+                {{ form.processing ? "Enregistrement..." : "Enregistrer" }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </AuthenticatedLayout>
+</template>

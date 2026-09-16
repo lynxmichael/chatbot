@@ -1,0 +1,135 @@
+<script setup>
+import { Head, Link } from "@inertiajs/vue3";
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+
+defineProps({
+  client: {
+    type: Object,
+    required: true,
+  },
+});
+</script>
+
+<template>
+  <Head :title="`${client.first_name} ${client.last_name}`" />
+
+  <AuthenticatedLayout>
+    <template #header>
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-semibold text-gray-800">Détails du client</h2>
+
+        <div class="flex gap-2">
+          <Link
+            :href="route('clients.edit', client.id)"
+            class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+          >
+            Modifier
+          </Link>
+
+          <Link
+            :href="route('clients.index')"
+            class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Retour
+          </Link>
+        </div>
+      </div>
+    </template>
+
+    <div class="py-8">
+      <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+        <div class="overflow-hidden rounded-lg bg-white shadow">
+          <div class="border-b px-6 py-6">
+            <div class="flex items-center gap-4">
+              <div
+                class="flex h-16 w-16 items-center justify-center rounded-full bg-indigo-100 text-xl font-bold text-indigo-700"
+              >
+                {{ client.first_name.charAt(0)
+                }}{{ client.last_name.charAt(0) }}
+              </div>
+
+              <div>
+                <h1 class="text-2xl font-bold text-gray-900">
+                  {{ client.first_name }} {{ client.last_name }}
+                </h1>
+
+                <p class="text-sm text-gray-500">Client #{{ client.id }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-6 p-6 md:grid-cols-2">
+            <div>
+              <p class="text-sm text-gray-500">Téléphone</p>
+              <p class="mt-1 font-medium text-gray-900">
+                {{ client.phone }}
+              </p>
+            </div>
+
+            <div>
+              <p class="text-sm text-gray-500">Email</p>
+              <p class="mt-1 font-medium text-gray-900">
+                {{ client.email || "Non renseigné" }}
+              </p>
+            </div>
+
+            <div>
+              <p class="text-sm text-gray-500">Entreprise</p>
+              <p class="mt-1 font-medium text-gray-900">
+                {{ client.company || "Non renseignée" }}
+              </p>
+            </div>
+
+            <div>
+              <p class="text-sm text-gray-500">Statut</p>
+              <span
+                class="mt-1 inline-flex rounded-full px-2 py-1 text-xs font-semibold"
+                :class="{
+                  'bg-green-100 text-green-800': client.status === 'active',
+                  'bg-gray-100 text-gray-800': client.status === 'inactive',
+                  'bg-red-100 text-red-800': client.status === 'blocked',
+                }"
+              >
+                {{
+                  client.status === "active"
+                    ? "Actif"
+                    : client.status === "inactive"
+                      ? "Inactif"
+                      : "Bloqué"
+                }}
+              </span>
+            </div>
+
+            <div>
+              <p class="text-sm text-gray-500">Ville</p>
+              <p class="mt-1 font-medium text-gray-900">
+                {{ client.city || "Non renseignée" }}
+              </p>
+            </div>
+
+            <div>
+              <p class="text-sm text-gray-500">Pays</p>
+              <p class="mt-1 font-medium text-gray-900">
+                {{ client.country || "Non renseigné" }}
+              </p>
+            </div>
+
+            <div class="md:col-span-2">
+              <p class="text-sm text-gray-500">Adresse</p>
+              <p class="mt-1 font-medium text-gray-900">
+                {{ client.address || "Non renseignée" }}
+              </p>
+            </div>
+
+            <div class="md:col-span-2">
+              <p class="text-sm text-gray-500">Notes</p>
+              <p class="mt-1 whitespace-pre-line text-gray-900">
+                {{ client.notes || "Aucune note." }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </AuthenticatedLayout>
+</template>

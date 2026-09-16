@@ -1,58 +1,65 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Suivi automatique des tickets (point 5 de la feuille de route)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Ce que fait ce module :
 
-## About Laravel
+1. **Alerte de dépassement de SLA** — toutes les 15 minutes, une
+   commande vérifie les tickets ouverts dont le délai SLA est dépassé
+   et notifie l'agent assigné (visible dans la cloche de notifications,
+   déjà présente dans ton interface — aucune modification front
+   nécessaire, elle affiche déjà génériquement `data.ticket_id`).
+2. **Fermeture automatique** — chaque nuit à 2h, les tickets passés en
+   `resolved` depuis plus de 3 jours (réglable) sans nouvelle activité
+   sont automatiquement fermés (`closed`).
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Fichiers NOUVEAUX
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- `database/migrations/2026_09_15_100000_add_sla_breached_notified_at_to_tickets_table.php`
+  — ajoute une colonne pour ne notifier qu'une seule fois par ticket.
+- `app/Notifications/TicketSlaBreachedNotification.php`
+- `app/Console/Commands/CheckTicketSlaCommand.php` (`php artisan tickets:check-sla`)
+- `app/Console/Commands/CloseResolvedTicketsCommand.php` (`php artisan tickets:close-resolved`)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Fichiers MODIFIÉS
 
-## Learning Laravel
+- `app/Models/Ticket.php` — nouvelle colonne ajoutée au fillable/casts
+- `config/tickets.php` — ajout de `auto_close_after_days` (3 par défaut,
+  réglable via `TICKET_AUTO_CLOSE_DAYS` dans `.env`)
+- `routes/console.php` — planification des deux commandes
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Étapes pour intégrer
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+1. Copie les fichiers dans ton projet.
+2. Lance la migration :
+   ```
+   php artisan migrate
+   ```
+3. **Important** : pour que ça tourne vraiment, il faut que le
+   planificateur Laravel soit actif sur ton serveur. En production,
+   ajoute cette tâche cron (une seule fois, quel que soit le nombre de
+   commandes planifiées) :
+   ```
+   * * * * * cd /chemin/vers/ton/projet && php artisan schedule:run >> /dev/null 2>&1
+   ```
+   En développement local, tu peux à la place laisser tourner :
+   ```
+   php artisan schedule:work
+   ```
+4. Tu peux aussi lancer les commandes manuellement pour tester tout de
+   suite, sans attendre le planificateur :
+   ```
+   php artisan tickets:check-sla
+   php artisan tickets:close-resolved
+   ```
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+## Ce qui n'est PAS fait — et qui bloque sur une info dont j'ai besoin
 
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
-```
-
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Ta feuille de route décrit aussi, pour le suivi automatique : *vérifier
+la commande*, *vérifier le statut de livraison*, et *contacter le
+système concerné si une intégration existe*. Je n'ai trouvé **aucun
+système de commandes/livraison** dans ce projet — ni modèle, ni table,
+ni API. Avant de construire cette partie, j'ai besoin de savoir : ces
+commandes existent-elles dans un autre système (boutique en ligne,
+ERP...) que l'IA devrait interroger ? Si oui, lequel, et as-tu déjà un
+accès API à ce système ? Sans ça, je ne peux que construire une
+interface pour saisir/consulter des commandes directement dans cette
+application — dis-moi ce qui correspond à ta situation réelle.

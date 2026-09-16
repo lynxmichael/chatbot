@@ -12,94 +12,54 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Appels lancés depuis le widget.
+ *
+ * Déroulé réel :
+ *
+ *   client clique  -> ringing   (le poste de l'agent sonne)
+ *   agent décroche -> answered  (la durée démarre ici)
+ *   l'un des deux  -> completed
+ *   personne       -> missed    (après expiration de la sonnerie)
+ *   client renonce -> cancelled
+ */
 class WidgetCallController extends Controller
 {
     /**
-     * Démarrer un appel depuis le widget.
+     * Durée maximale de sonnerie, en secondes.
      */
+    private const RING_TIMEOUT = 45;
+
     public function start(Request $request): JsonResponse
     {
-        $token = $request->header('X-Widget-Token');
-
-        if (!$token) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Token widget manquant.',
-            ], 401);
-        }
-
-        $organization = Organization::where('widget_token', $token)->first();
-
-        if (!$organization) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Token widget invalide.',
-            ], 403);
-        }
+        $organization = $this->organizationFromToken($request);
 
         $validated = $request->validate([
             'conversation_id' => ['nullable', 'integer'],
-            'client_id' => ['nullable', 'integer'],
-            'first_name' => ['nullable', 'string', 'max:255'],
-            'last_name' => ['nullable', 'string', 'max:255'],
+            'first_name' => ['nullable', 'string', 'max:100'],
+            'last_name' => ['nullable', 'string', 'max:100'],
             'email' => ['nullable', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:50'],
+            'phone' => ['nullable', 'string', 'max:30'],
         ]);
 
-        /*
-         * ============================================================
-         * 1. Récupérer la conversation et le client
-         * ============================================================
-         */
-        $conversation = null;
-        $client = null;
+        $result = DB::transaction(function () use ($organization, $validated) {
+            $conversation = null;
 
-        if (!empty($validated['conversation_id'])) {
-            $conversation = Conversation::query()
-                ->where('organization_id', $organization->id)
-                ->where('id', $validated['conversation_id'])
-                ->first();
+            $client = null;
 
-            if (!$conversation) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Conversation introuvable.',
-                ], 404);
-            }
+            /*
+             * Conversation existante : le client en découle directement.
+             */
+            if (!empty($validated['conversation_id'])) {
+                $conversation = Conversation::query()
+                    ->where('organization_id', $organization->id)
+                    ->find($validated['conversation_id']);
 
-            if ($conversation->client_id) {
+                abort_unless($conversation, 404);
+
                 $client = Client::query()
                     ->where('organization_id', $organization->id)
-                    ->where('id', $conversation->client_id)
-                    ->first();
-            }
-
-            if (!$client) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Client associé à la conversation introuvable.',
-                ], 404);
-            }
-        }
-
-        /*
-         * ============================================================
-         * 2. Créer/récupérer le client et la conversation
-         * ============================================================
-         */
-        if (!$conversation) {
-            if (!empty($validated['client_id'])) {
-                $client = Client::query()
-                    ->where('organization_id', $organization->id)
-                    ->where('id', $validated['client_id'])
-                    ->first();
-
-                if (!$client) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Client introuvable.',
-                    ], 404);
-                }
+                    ->find($conversation->client_id);
             }
 
             if (!$client && !empty($validated['email'])) {
@@ -116,7 +76,18 @@ class WidgetCallController extends Controller
                     ->first();
             }
 
-            if (!$client) {
+            if ($client) {
+                /*
+                 * On complète le dossier sans jamais écraser
+                 * une valeur existante par du vide.
+                 */
+                $client->update(array_filter([
+                    'first_name' => $validated['first_name'] ?? null,
+                    'last_name' => $validated['last_name'] ?? null,
+                    'email' => $validated['email'] ?? null,
+                    'phone' => $validated['phone'] ?? null,
+                ]));
+            } else {
                 $client = Client::create([
                     'organization_id' => $organization->id,
                     'first_name' => $validated['first_name'] ?? 'Client',
@@ -127,317 +98,253 @@ class WidgetCallController extends Controller
                 ]);
             }
 
-            $conversation = Conversation::create([
-                'organization_id' => $organization->id,
-                'client_id' => $client->id,
-                'subject' => 'Appel depuis le widget',
-                'channel' => 'phone',
-                'status' => 'open',
-                'priority' => 'normal',
-                'ai_enabled' => false,
-                'last_message_at' => now(),
-            ]);
-        }
+            if (!$conversation) {
+                $conversation = Conversation::create([
+                    'organization_id' => $organization->id,
+                    'client_id' => $client->id,
+                    'assigned_to' => null,
+                    'subject' => 'Appel depuis le widget',
+                    'channel' => 'web',
+                    'status' => 'open',
+                    'priority' => 'normal',
+                    'ai_enabled' => true,
+                    'last_message_at' => now(),
+                ]);
+            } else {
+                $conversation->update(['last_message_at' => now()]);
+            }
 
-        /*
-         * ============================================================
-         * 3. Vérifier si un appel est déjà actif pour cette
-         *    conversation.
-         *
-         *    Un appel "ringing" ou "answered" est considéré actif.
-         * ============================================================
-         */
-        $existingCall = Call::query()
-            ->where('organization_id', $organization->id)
-            ->where('conversation_id', $conversation->id)
-            ->whereIn('status', ['ringing', 'answered'])
-            ->whereNull('ended_at')
-            ->latest('id')
-            ->first();
+            /*
+             * Un appel est déjà en cours pour cette conversation :
+             * on le renvoie au lieu d'en créer un second.
+             */
+            $existing = Call::query()
+                ->where('organization_id', $organization->id)
+                ->where('conversation_id', $conversation->id)
+                ->whereIn('status', ['ringing', 'answered'])
+                ->latest('id')
+                ->first();
 
-        if ($existingCall) {
-            $agent = $existingCall->user;
+            if ($existing) {
+                return [
+                    'call' => $existing,
+                    'conversation' => $conversation,
+                    'client' => $client,
+                    'agent' => $existing->user,
+                    'reused' => true,
+                ];
+            }
 
-            return response()->json([
-                'success' => true,
-                'call_id' => $existingCall->id,
-                'conversation_id' => $conversation->id,
-                'status' => $existingCall->status,
-                'agent' => $agent ? [
-                    'id' => $agent->id,
-                    'name' => $agent->name,
-                ] : null,
-                'message' => $existingCall->status === 'ringing'
-                    ? 'Un appel est déjà en attente de prise en charge.'
-                    : 'Un appel est déjà en cours.',
-            ]);
-        }
+            /*
+             * Agents joignables : actifs, disponibles, et dont le poste
+             * n'est ni en ligne ni déjà en train de sonner.
+             */
+            $occupied = Call::query()
+                ->where('organization_id', $organization->id)
+                ->whereIn('status', ['ringing', 'answered'])
+                ->whereNotNull('user_id')
+                ->pluck('user_id');
 
-        /*
-         * ============================================================
-         * 4. Trouver un agent disponible.
-         *
-         * Les appels "ringing" et "answered" réservent l'agent.
-         * ============================================================
-         */
-        $busyAgentIds = Call::query()
-            ->where('organization_id', $organization->id)
-            ->whereIn('status', ['ringing', 'answered'])
-            ->whereNull('ended_at')
-            ->whereNotNull('user_id')
-            ->pluck('user_id');
+            $agent = User::query()
+                ->where('organization_id', $organization->id)
+                ->whereIn('role', ['agent', 'owner'])
+                ->where('is_active', true)
+                ->where(function ($query) {
+                    $query->where('is_available', true)
+                        ->orWhereNull('is_available');
+                })
+                ->when(
+                    $occupied->isNotEmpty(),
+                    fn ($query) => $query->whereNotIn('id', $occupied)
+                )
+                ->orderBy('id')
+                ->first();
 
-        $agent = User::query()
-            ->where('organization_id', $organization->id)
-            ->where('role', 'agent')
-            ->where('is_active', true)
-            ->whereNotIn('id', $busyAgentIds)
-            ->orderBy('id')
-            ->first();
-
-        if (!$agent) {
-            return response()->json([
-                'success' => false,
-                'status' => 'busy',
-                'conversation_id' => $conversation->id,
-                'message' => 'Tous les agents sont actuellement occupés.',
-            ], 409);
-        }
-
-        /*
-         * ============================================================
-         * 5. Créer l'appel avec le statut "ringing".
-         * ============================================================
-         */
-        $call = DB::transaction(function () use (
-            $organization,
-            $client,
-            $conversation,
-            $agent
-        ) {
             $call = Call::create([
                 'organization_id' => $organization->id,
                 'client_id' => $client->id,
                 'conversation_id' => $conversation->id,
-                'user_id' => $agent->id,
+                'user_id' => $agent?->id,
                 'type' => 'incoming',
 
-                // L'appel attend maintenant que l'agent le prenne.
-                'status' => 'ringing',
+                /*
+                 * Sans agent joignable, inutile de faire patienter
+                 * le client sur une sonnerie qui n'aboutira pas.
+                 */
+                'status' => $agent ? 'ringing' : 'busy',
 
-                'phone' => $client->phone,
+                'phone' => $client->phone ?: 'widget',
                 'duration' => 0,
-                'reason' => 'Appel depuis le widget',
-                'notes' => null,
-
-                // Le vrai démarrage sera enregistré lorsque
-                // l'agent répondra.
-                'started_at' => null,
-                'ended_at' => null,
+                'reason' => 'Appel initié depuis le widget',
+                'started_at' => now(),
             ]);
 
-            $conversation->update([
-                'status' => 'open',
-                'assigned_to' => $agent->id,
-                'last_message_at' => now(),
-            ]);
-
-            return $call;
+            return [
+                'call' => $call,
+                'conversation' => $conversation,
+                'client' => $client,
+                'agent' => $agent,
+                'reused' => false,
+            ];
         });
 
+        $call = $result['call'];
+
         return response()->json([
             'success' => true,
             'call_id' => $call->id,
-            'conversation_id' => $conversation->id,
+            'conversation_id' => $result['conversation']->id,
             'status' => $call->status,
-            'agent' => [
-                'id' => $agent->id,
-                'name' => $agent->name,
-            ],
-            'message' => 'Appel en attente de prise en charge par un agent.',
-        ]);
+            'ring_timeout' => self::RING_TIMEOUT,
+
+            'agent' => $result['agent']
+                ? [
+                    'id' => $result['agent']->id,
+                    'name' => $result['agent']->name,
+                ]
+                : null,
+
+            'message' => match ($call->status) {
+                'ringing' => 'Le poste du conseiller sonne.',
+                'answered' => 'Appel en cours.',
+                default => 'Tous nos conseillers sont occupés.',
+            },
+        ], $result['reused'] ? 200 : 201);
     }
 
     /**
-     * Répondre à un appel.
-     */
-    public function answer(Request $request, Call $call): JsonResponse
-    {
-        $token = $request->header('X-Widget-Token');
-
-        if (!$token) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Token widget manquant.',
-            ], 401);
-        }
-
-        $organization = Organization::where('widget_token', $token)->first();
-
-        if (!$organization) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Token widget invalide.',
-            ], 403);
-        }
-
-        if ($call->organization_id !== $organization->id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Appel non autorisé.',
-            ], 403);
-        }
-
-        if ($call->status === 'answered') {
-            return response()->json([
-                'success' => true,
-                'call_id' => $call->id,
-                'status' => 'answered',
-                'message' => 'L’appel est déjà en cours.',
-            ]);
-        }
-
-        if ($call->status !== 'ringing') {
-            return response()->json([
-                'success' => false,
-                'call_id' => $call->id,
-                'status' => $call->status,
-                'message' => 'Cet appel ne peut plus être pris en charge.',
-            ], 409);
-        }
-
-        $call->update([
-            'status' => 'answered',
-            'started_at' => now(),
-        ]);
-
-        if ($call->conversation) {
-            $call->conversation->update([
-                'status' => 'open',
-                'assigned_to' => $call->user_id,
-                'last_message_at' => now(),
-            ]);
-        }
-
-        return response()->json([
-            'success' => true,
-            'call_id' => $call->id,
-            'conversation_id' => $call->conversation_id,
-            'status' => 'answered',
-            'agent' => $call->user ? [
-                'id' => $call->user->id,
-                'name' => $call->user->name,
-            ] : null,
-            'started_at' => $call->started_at,
-            'message' => 'Appel accepté.',
-        ]);
-    }
-
-    /**
-     * Récupérer l'état d'un appel.
-     */
-    public function status(Request $request, Call $call): JsonResponse
-    {
-        $token = $request->header('X-Widget-Token');
-
-        if (!$token) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Token widget manquant.',
-            ], 401);
-        }
-
-        $organization = Organization::where('widget_token', $token)->first();
-
-        if (!$organization) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Token widget invalide.',
-            ], 403);
-        }
-
-        if ($call->organization_id !== $organization->id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Appel non autorisé.',
-            ], 403);
-        }
-
-        return response()->json([
-            'success' => true,
-            'call_id' => $call->id,
-            'status' => $call->status,
-            'conversation_id' => $call->conversation_id,
-            'agent' => $call->user ? [
-                'id' => $call->user->id,
-                'name' => $call->user->name,
-            ] : null,
-            'started_at' => $call->started_at,
-            'ended_at' => $call->ended_at,
-            'duration' => $call->duration,
-        ]);
-    }
-
-    /**
-     * Terminer un appel depuis le widget.
+     * Le client raccroche.
      */
     public function end(Request $request, Call $call): JsonResponse
     {
-        $token = $request->header('X-Widget-Token');
+        $organization = $this->organizationFromToken($request);
 
-        if (!$token) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Token widget manquant.',
-            ], 401);
-        }
+        $this->authorizeCall($organization, $call);
 
-        $organization = Organization::where('widget_token', $token)->first();
-
-        if (!$organization) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Token widget invalide.',
-            ], 403);
-        }
-
-        if ($call->organization_id !== $organization->id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Appel non autorisé.',
-            ], 403);
-        }
-
-        if (in_array($call->status, ['cancelled', 'missed', 'busy', 'failed'], true)) {
+        if (!in_array($call->status, ['ringing', 'answered'], true)) {
             return response()->json([
                 'success' => true,
                 'call_id' => $call->id,
                 'status' => $call->status,
-                'message' => 'L’appel est déjà terminé.',
+                'duration' => (int) $call->duration,
             ]);
         }
 
-        $duration = 0;
-
-        if ($call->status === 'answered' && $call->started_at) {
-            $duration = max(
-                0,
-                now()->diffInSeconds($call->started_at)
-            );
-        }
+        /*
+         * Raccrocher pendant la sonnerie n'est pas un appel terminé,
+         * c'est un appel abandonné. La distinction compte pour les
+         * statistiques du service.
+         */
+        $wasAnswered = $call->status === 'answered';
 
         $call->update([
-            'status' => 'cancelled',
-            'duration' => $duration,
+            'status' => $wasAnswered ? 'completed' : 'cancelled',
+            'duration' => $this->duration($call),
             'ended_at' => now(),
         ]);
 
         return response()->json([
             'success' => true,
             'call_id' => $call->id,
-            'status' => 'cancelled',
-            'duration' => $duration,
-            'message' => 'Appel terminé.',
+            'status' => $call->status,
+            'duration' => (int) $call->duration,
         ]);
+    }
+
+    /**
+     * État de l'appel, interrogé en boucle par le widget.
+     */
+    public function status(Request $request, Call $call): JsonResponse
+    {
+        $organization = $this->organizationFromToken($request);
+
+        $this->authorizeCall($organization, $call);
+
+        /*
+         * Sonnerie trop longue : l'appel bascule en manqué.
+         *
+         * Ce basculement se fait ici plutôt que dans une tâche
+         * planifiée, parce que le widget interroge cet endpoint
+         * toutes les deux secondes pendant la sonnerie.
+         */
+        if (
+            $call->status === 'ringing'
+            && $call->started_at
+            && $call->started_at->diffInSeconds(now()) > self::RING_TIMEOUT
+        ) {
+            $call->update([
+                'status' => 'missed',
+                'ended_at' => now(),
+            ]);
+        }
+
+        $call->load([
+            'client:id,first_name,last_name,email,phone',
+            'conversation:id,subject,status,ai_enabled',
+            'user:id,name',
+        ]);
+
+        return response()->json([
+            'success' => true,
+
+            'call' => [
+                'id' => $call->id,
+                'status' => $call->status,
+                'type' => $call->type,
+                'duration' => $call->status === 'answered'
+                    ? $this->duration($call)
+                    : (int) $call->duration,
+                'started_at' => $call->started_at,
+                'answered_at' => $call->answered_at,
+                'ended_at' => $call->ended_at,
+            ],
+
+            'agent' => $call->user
+                ? [
+                    'id' => $call->user->id,
+                    'name' => $call->user->name,
+                ]
+                : null,
+
+            'conversation' => $call->conversation
+                ? [
+                    'id' => $call->conversation->id,
+                    'subject' => $call->conversation->subject,
+                    'ai_enabled' => (bool) $call->conversation->ai_enabled,
+                ]
+                : null,
+        ]);
+    }
+
+    /**
+     * Durée écoulée depuis le décroché.
+     */
+    private function duration(Call $call): int
+    {
+        if (!$call->answered_at) {
+            return (int) $call->duration;
+        }
+
+        return (int) max(0, $call->answered_at->diffInSeconds(now()));
+    }
+
+    private function authorizeCall(Organization $organization, Call $call): void
+    {
+        abort_unless($call->organization_id === $organization->id, 404);
+    }
+
+    private function organizationFromToken(Request $request): Organization
+    {
+        $token = $request->header('X-Widget-Token');
+
+        abort_unless($token, 401);
+
+        $organization = Organization::query()
+            ->where('widget_token', $token)
+            ->first();
+
+        abort_unless($organization, 401);
+
+        return $organization;
     }
 }

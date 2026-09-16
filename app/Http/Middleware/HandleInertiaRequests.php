@@ -27,13 +27,43 @@ class HandleInertiaRequests extends Middleware
      *
      * @return array<string, mixed>
      */
-    public function share(Request $request): array
-    {
-        return [
-            ...parent::share($request),
-            'auth' => [
-                'user' => $request->user(),
-            ],
-        ];
-    }
+   public function share(Request $request): array
+{
+    $user = $request->user()?->loadMissing('organization');
+
+    return [
+        ...parent::share($request),
+
+        'auth' => [
+            'user' => $user,
+        ],
+
+        'flash' => [
+            'success' => $request->session()->get('success'),
+            'error' => $request->session()->get('error'),
+            'warning' => $request->session()->get('warning'),
+        ],
+
+        'notifications' => fn () => $user
+            ? $user->notifications()
+                ->latest()
+                ->limit(10)
+                ->get()
+                ->map(function ($notification) {
+                    return [
+                        'id' => $notification->id,
+                        'type' => $notification->type,
+                        'data' => $notification->data,
+                        'read_at' => $notification->read_at,
+                        'created_at' => $notification->created_at?->toISOString(),
+                    ];
+                })
+                ->values()
+            : collect(),
+
+        'unread_notifications_count' => fn () => $user
+            ? $user->unreadNotifications()->count()
+            : 0,
+    ];
+}
 }

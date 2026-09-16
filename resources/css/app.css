@@ -1,3 +1,77 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    html {
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+        @apply bg-canvas text-night-800;
+    }
+
+    /* Les chiffres d'une console ne doivent pas gigoter quand ils changent. */
+    .tabular,
+    .font-mono {
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: 'tnum' 1;
+    }
+
+    :focus-visible {
+        @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-canvas;
+    }
+
+    /* Barres de défilement discrètes sur les zones denses */
+    .scroll-slim {
+        scrollbar-width: thin;
+        scrollbar-color: theme('colors.line.strong') transparent;
+    }
+
+    .scroll-slim::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    .scroll-slim::-webkit-scrollbar-thumb {
+        @apply rounded-full bg-line-strong;
+    }
+
+    .scroll-slim::-webkit-scrollbar-track {
+        background: transparent;
+    }
+}
+
+@layer components {
+    /* Squelette de chargement */
+    .skeleton {
+        @apply relative overflow-hidden rounded-md bg-canvas-sunken;
+    }
+
+    .skeleton::after {
+        @apply absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/70 to-transparent;
+        content: '';
+        transform: translateX(-100%);
+    }
+
+    /* Entrée décalée des listes : l'index est passé en --i */
+    .stagger > * {
+        animation: rise-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+        animation-delay: calc(var(--i, 0) * 35ms);
+    }
+}
+
+/*
+| Toute animation d'ambiance est coupée si la personne a demandé
+| moins de mouvement. Les transitions d'état restent, en instantané.
+*/
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+    }
+}
