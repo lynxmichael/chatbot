@@ -1,256 +1,290 @@
 <script setup>
-import { Link, useForm } from "@inertiajs/vue3";
+import { computed } from "vue";
+import { Head, Link, useForm } from "@inertiajs/vue3";
+
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import PageHeader from "@/Components/UI/PageHeader.vue";
+import SurfaceCard from "@/Components/UI/SurfaceCard.vue";
+import FlashMessages from "@/Components/UI/FlashMessages.vue";
 
 const props = defineProps({
-    agent: {
-        type: Object,
-        required: true,
-    },
+    agent: { type: Object, required: true },
+    categories: { type: Array, default: () => [] },
 });
 
 const form = useForm({
-    name: props.agent.name ?? "",
-    email: props.agent.email ?? "",
+    name: props.agent.name,
+    email: props.agent.email,
     password: "",
     password_confirmation: "",
+    is_available: props.agent.is_available,
+    max_open_tickets: props.agent.max_open_tickets,
+    skills: [...props.agent.skills],
 });
 
 const submit = () => {
-    form.put(route("agents.update", props.agent.id));
+    form.transform((data) => ({
+        ...data,
+        max_open_tickets: Number(data.max_open_tickets),
+        is_available: Boolean(data.is_available),
+    })).put(route("agents.update", props.agent.id));
 };
+
+const toggleSkill = (category) => {
+    const index = form.skills.indexOf(category);
+
+    if (index === -1) {
+        form.skills.push(category);
+    } else {
+        form.skills.splice(index, 1);
+    }
+};
+
+const categoryLabels = {
+    facturation: "Facturation",
+    livraison: "Livraison",
+    technique: "Technique",
+    reclamation: "Réclamation",
+    remboursement: "Remboursement",
+    commande: "Commande",
+    compte: "Compte",
+    general: "Général",
+};
+
+const label = (category) => categoryLabels[category] ?? category;
+
+/*
+ * Avertissement affiché en clair plutôt qu'en petit : un agent sans
+ * compétence ne sera jamais choisi en priorité par le routage, et c'est
+ * le genre de réglage qu'on oublie.
+ */
+const routingNotice = computed(() => {
+    if (!form.is_available) {
+        return "Cet agent ne recevra ni appel ni nouveau ticket tant qu'il est marqué indisponible.";
+    }
+
+    if (!form.skills.length) {
+        return "Sans compétence déclarée, cet agent ne sera choisi que faute de mieux, quand tous les autres sont chargés.";
+    }
+
+    return null;
+});
+
+const overCapacity = computed(
+    () => props.agent.open_tickets > Number(form.max_open_tickets),
+);
 </script>
 
 <template>
-    <div class="min-h-screen bg-gray-50">
-        <!-- Navigation -->
-        <nav class="border-b border-gray-200 bg-white">
-            <div
-                class="mx-auto flex max-w-7xl items-center justify-between px-6 py-4"
+    <Head :title="`Régler ${agent.name}`" />
+
+    <AuthenticatedLayout>
+        <div class="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+            <PageHeader
+                :title="agent.name"
+                description="Compte, compétences et capacité de traitement."
             >
-                <div class="flex items-center gap-8">
-                    <Link
-                        :href="route('dashboard')"
-                        class="text-xl font-bold text-gray-900"
-                    >
-                        AI Service Client
-                    </Link>
-
-                    <Link
-                        :href="route('dashboard')"
-                        class="text-sm font-medium text-gray-600 hover:text-indigo-600"
-                    >
-                        Tableau de bord
-                    </Link>
-
-                    <Link
-                        :href="route('conversations.index')"
-                        class="text-sm font-medium text-gray-600 hover:text-indigo-600"
-                    >
-                        Conversations
-                    </Link>
-
+                <template #actions>
                     <Link
                         :href="route('agents.index')"
-                        class="text-sm font-semibold text-indigo-600"
+                        class="rounded-xl border border-line bg-white px-4 py-2 text-sm font-medium text-night-700 transition hover:bg-canvas-sunken"
                     >
-                        Agents
+                        Retour
                     </Link>
+                </template>
+            </PageHeader>
 
-                    <Link
-                        :href="route('clients.index')"
-                        class="text-sm font-medium text-gray-600 hover:text-indigo-600"
+            <FlashMessages />
+
+            <form class="space-y-6" @submit.prevent="submit">
+                <!-- Compte -->
+
+                <SurfaceCard title="Compte">
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <label class="block text-xs font-medium text-night-500">
+                                Nom
+                            </label>
+                            <input
+                                v-model="form.name"
+                                type="text"
+                                class="mt-1 w-full rounded-xl border-line text-sm focus:border-brand-400 focus:ring-brand-400"
+                            />
+                            <p
+                                v-if="form.errors.name"
+                                class="mt-1 text-xs text-rose-600"
+                            >
+                                {{ form.errors.name }}
+                            </p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-night-500">
+                                Email
+                            </label>
+                            <input
+                                v-model="form.email"
+                                type="email"
+                                class="mt-1 w-full rounded-xl border-line text-sm focus:border-brand-400 focus:ring-brand-400"
+                            />
+                            <p
+                                v-if="form.errors.email"
+                                class="mt-1 text-xs text-rose-600"
+                            >
+                                {{ form.errors.email }}
+                            </p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-night-500">
+                                Nouveau mot de passe
+                            </label>
+                            <input
+                                v-model="form.password"
+                                type="password"
+                                autocomplete="new-password"
+                                placeholder="Laisser vide pour ne pas changer"
+                                class="mt-1 w-full rounded-xl border-line text-sm focus:border-brand-400 focus:ring-brand-400"
+                            />
+                            <p
+                                v-if="form.errors.password"
+                                class="mt-1 text-xs text-rose-600"
+                            >
+                                {{ form.errors.password }}
+                            </p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-night-500">
+                                Confirmation
+                            </label>
+                            <input
+                                v-model="form.password_confirmation"
+                                type="password"
+                                autocomplete="new-password"
+                                class="mt-1 w-full rounded-xl border-line text-sm focus:border-brand-400 focus:ring-brand-400"
+                            />
+                        </div>
+                    </div>
+                </SurfaceCard>
+
+                <!-- Routage -->
+
+                <SurfaceCard
+                    title="Répartition automatique"
+                    description="Ces réglages décident des appels et des tickets que reçoit cet agent."
+                >
+                    <!-- Disponibilité -->
+
+                    <label
+                        class="flex cursor-pointer items-start gap-3 rounded-xl border border-line px-4 py-3 transition hover:bg-canvas-sunken"
                     >
-                        Clients
-                    </Link>
-                </div>
+                        <input
+                            v-model="form.is_available"
+                            type="checkbox"
+                            class="mt-0.5 h-4 w-4 rounded border-line-strong text-brand-500 focus:ring-brand-400"
+                        />
+                        <span>
+                            <span class="block text-sm font-medium text-night-800">
+                                Disponible
+                            </span>
+                            <span class="mt-0.5 block text-xs text-night-400">
+                                Son poste sonne et il reçoit de nouveaux tickets.
+                            </span>
+                        </span>
+                    </label>
 
-                <div class="flex items-center gap-4">
-                    <span class="text-sm text-gray-600">
-                        {{ $page.props.auth?.user?.name ?? "Administrateur" }}
+                    <!-- Compétences -->
+
+                    <div class="mt-6">
+                        <p class="text-xs font-medium text-night-500">
+                            Compétences
+                        </p>
+                        <p class="mt-0.5 text-xs text-night-400">
+                            Une demande de cette catégorie lui sera confiée en
+                            priorité.
+                        </p>
+
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <button
+                                v-for="category in categories"
+                                :key="category"
+                                type="button"
+                                class="rounded-lg px-3 py-1.5 text-sm font-medium transition"
+                                :class="
+                                    form.skills.includes(category)
+                                        ? 'bg-brand-500 text-white'
+                                        : 'bg-white text-night-600 ring-1 ring-line hover:bg-canvas-sunken'
+                                "
+                                @click="toggleSkill(category)"
+                            >
+                                {{ label(category) }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Capacité -->
+
+                    <div class="mt-6 max-w-xs">
+                        <label class="block text-xs font-medium text-night-500">
+                            Capacité maximale
+                        </label>
+
+                        <input
+                            v-model="form.max_open_tickets"
+                            type="number"
+                            min="1"
+                            max="200"
+                            class="mt-1 w-full rounded-xl border-line text-sm focus:border-brand-400 focus:ring-brand-400"
+                        />
+
+                        <p class="mt-1 text-xs text-night-400">
+                            Tickets ouverts simultanément. Actuellement :
+                            {{ agent.open_tickets }}.
+                        </p>
+
+                        <p
+                            v-if="overCapacity"
+                            class="mt-1 text-xs text-amber-700"
+                        >
+                            Sa charge actuelle dépasse déjà cette limite. Il
+                            restera en bas de la liste tant qu'elle ne sera pas
+                            redescendue.
+                        </p>
+
+                        <p
+                            v-if="form.errors.max_open_tickets"
+                            class="mt-1 text-xs text-rose-600"
+                        >
+                            {{ form.errors.max_open_tickets }}
+                        </p>
+                    </div>
+
+                    <p
+                        v-if="routingNotice"
+                        class="mt-6 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800 ring-1 ring-amber-200"
+                    >
+                        {{ routingNotice }}
+                    </p>
+                </SurfaceCard>
+
+                <div class="flex items-center justify-end gap-3">
+                    <span
+                        v-if="form.recentlySuccessful"
+                        class="text-sm text-emerald-600"
+                    >
+                        Enregistré.
                     </span>
 
-                    <Link
-                        :href="route('logout')"
-                        method="post"
-                        as="button"
-                        class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+                    <button
+                        type="submit"
+                        :disabled="form.processing"
+                        class="rounded-xl bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-50"
                     >
-                        Déconnexion
-                    </Link>
+                        Enregistrer
+                    </button>
                 </div>
-            </div>
-        </nav>
-
-        <!-- Contenu -->
-        <main class="mx-auto max-w-3xl px-6 py-8">
-            <div class="mb-6">
-                <Link
-                    :href="route('agents.index')"
-                    class="text-sm font-medium text-indigo-600 hover:text-indigo-800"
-                >
-                    ← Retour aux agents
-                </Link>
-            </div>
-
-            <div class="mb-8">
-                <h1 class="text-3xl font-bold text-gray-900">
-                    Modifier l'agent
-                </h1>
-
-                <p class="mt-2 text-gray-500">
-                    Modifiez les informations de cet agent.
-                </p>
-            </div>
-
-            <div
-                class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-100 md:p-8"
-            >
-                <form
-                    @submit.prevent="submit"
-                    class="space-y-6"
-                >
-                    <!-- Nom -->
-                    <div>
-                        <label
-                            for="name"
-                            class="mb-2 block text-sm font-semibold text-gray-700"
-                        >
-                            Nom complet
-                        </label>
-
-                        <input
-                            id="name"
-                            v-model="form.name"
-                            type="text"
-                            autocomplete="name"
-                            class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                            :class="{
-                                'border-red-500': form.errors.name,
-                            }"
-                        />
-
-                        <p
-                            v-if="form.errors.name"
-                            class="mt-1 text-sm text-red-600"
-                        >
-                            {{ form.errors.name }}
-                        </p>
-                    </div>
-
-                    <!-- Email -->
-                    <div>
-                        <label
-                            for="email"
-                            class="mb-2 block text-sm font-semibold text-gray-700"
-                        >
-                            Adresse email
-                        </label>
-
-                        <input
-                            id="email"
-                            v-model="form.email"
-                            type="email"
-                            autocomplete="email"
-                            class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                            :class="{
-                                'border-red-500': form.errors.email,
-                            }"
-                        />
-
-                        <p
-                            v-if="form.errors.email"
-                            class="mt-1 text-sm text-red-600"
-                        >
-                            {{ form.errors.email }}
-                        </p>
-                    </div>
-
-                    <!-- Nouveau mot de passe -->
-                    <div>
-                        <label
-                            for="password"
-                            class="mb-2 block text-sm font-semibold text-gray-700"
-                        >
-                            Nouveau mot de passe
-                        </label>
-
-                        <input
-                            id="password"
-                            v-model="form.password"
-                            type="password"
-                            autocomplete="new-password"
-                            placeholder="Laisser vide pour conserver l'ancien"
-                            class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                            :class="{
-                                'border-red-500': form.errors.password,
-                            }"
-                        />
-
-                        <p class="mt-1 text-xs text-gray-500">
-                            Laissez ce champ vide si vous ne souhaitez pas
-                            modifier le mot de passe.
-                        </p>
-
-                        <p
-                            v-if="form.errors.password"
-                            class="mt-1 text-sm text-red-600"
-                        >
-                            {{ form.errors.password }}
-                        </p>
-                    </div>
-
-                    <!-- Confirmation -->
-                    <div>
-                        <label
-                            for="password_confirmation"
-                            class="mb-2 block text-sm font-semibold text-gray-700"
-                        >
-                            Confirmer le nouveau mot de passe
-                        </label>
-
-                        <input
-                            id="password_confirmation"
-                            v-model="form.password_confirmation"
-                            type="password"
-                            autocomplete="new-password"
-                            placeholder="Répétez le nouveau mot de passe"
-                            class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                        />
-                    </div>
-
-                    <!-- Informations -->
-                    <div
-                        class="rounded-lg bg-indigo-50 px-4 py-3 text-sm text-indigo-700"
-                    >
-                        <strong>Agent :</strong>
-                        {{ props.agent.name }}
-                    </div>
-
-                    <!-- Actions -->
-                    <div
-                        class="flex flex-col-reverse gap-3 border-t border-gray-200 pt-6 sm:flex-row sm:justify-end"
-                    >
-                        <Link
-                            :href="route('agents.index')"
-                            class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-                        >
-                            Annuler
-                        </Link>
-
-                        <button
-                            type="submit"
-                            :disabled="form.processing"
-                            class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-5 py-3 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-300"
-                        >
-                            {{
-                                form.processing
-                                    ? "Enregistrement..."
-                                    : "Enregistrer les modifications"
-                            }}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </main>
-    </div>
+            </form>
+        </div>
+    </AuthenticatedLayout>
 </template>

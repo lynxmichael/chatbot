@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Call;
 use App\Models\User;
+use App\Services\AI\Usage\UsageMeter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -171,8 +172,11 @@ class CallDeskController extends Controller
     /**
      * L'agent raccroche.
      */
-    public function hangUp(Request $request, Call $call): JsonResponse
-    {
+    public function hangUp(
+        Request $request,
+        Call $call,
+        UsageMeter $usage
+    ): JsonResponse {
         $this->authorizeCall($request, $call);
 
         if (!in_array($call->status, ['ringing', 'answered'], true)) {
@@ -187,11 +191,17 @@ class CallDeskController extends Controller
             ? (int) max(0, $call->answered_at->diffInSeconds(now()))
             : 0;
 
+        $wasAnswered = $call->status === 'answered';
+
         $call->update([
-            'status' => $call->status === 'answered' ? 'completed' : 'missed',
+            'status' => $wasAnswered ? 'completed' : 'missed',
             'duration' => $duration,
             'ended_at' => now(),
         ]);
+
+        if ($wasAnswered && $duration > 0 && $call->organization) {
+            $usage->record($call->organization, ['voice_seconds' => $duration]);
+        }
 
         return response()->json([
             'success' => true,

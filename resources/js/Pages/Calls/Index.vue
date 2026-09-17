@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from "vue";
 import { Head, Link, router } from "@inertiajs/vue3";
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 
 const props = defineProps({
   calls: {
@@ -78,14 +79,14 @@ const typeClass = (value) => {
 
 const statusClass = (value) => {
   const classes = {
-    answered: "bg-green-100 text-green-700",
-    missed: "bg-red-100 text-red-700",
-    busy: "bg-yellow-100 text-yellow-700",
-    failed: "bg-red-100 text-red-700",
-    cancelled: "bg-gray-100 text-gray-700",
+    answered: "bg-emerald-100 text-emerald-700",
+    missed: "bg-rose-100 text-rose-700",
+    busy: "bg-amber-100 text-amber-700",
+    failed: "bg-rose-100 text-rose-700",
+    cancelled: "bg-canvas-sunken text-night-600",
   };
 
-  return classes[value] || "bg-gray-100 text-gray-700";
+  return classes[value] || "bg-canvas-sunken text-night-600";
 };
 
 const formatDuration = (seconds) => {
@@ -124,24 +125,24 @@ const clientName = (client) => {
 <template>
   <Head title="Appels" />
 
-  <div class="min-h-screen bg-gray-50">
+  <AuthenticatedLayout>
     <!-- En-tête -->
-    <div class="border-b bg-white">
+    <div class="pt-8">
       <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <div
           class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
         >
           <div>
-            <h1 class="text-2xl font-bold text-gray-900">Gestion des appels</h1>
+            <h1 class="text-2xl font-bold text-night-900">Gestion des appels</h1>
 
-            <p class="mt-1 text-sm text-gray-500">
+            <p class="mt-1 text-sm text-night-400">
               Historique et suivi des appels clients
             </p>
           </div>
 
           <Link
             :href="route('calls.create')"
-            class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+            class="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-600"
           >
             <svg
               class="mr-2 h-5 w-5"
@@ -167,18 +168,18 @@ const clientName = (client) => {
     <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       <!-- Filtres -->
       <div
-        class="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+        class="mb-6 rounded-xl border border-line bg-white p-5 shadow-sm"
       >
         <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
           <!-- Recherche -->
           <div class="md:col-span-2">
-            <label class="mb-1.5 block text-sm font-medium text-gray-700">
+            <label class="mb-1.5 block text-sm font-medium text-night-600">
               Rechercher
             </label>
 
             <div class="relative">
               <svg
-                class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
+                class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-night-300"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -195,20 +196,20 @@ const clientName = (client) => {
                 v-model="search"
                 type="text"
                 placeholder="Client, téléphone, motif..."
-                class="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                class="w-full rounded-lg border border-line-strong py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-200"
               />
             </div>
           </div>
 
           <!-- Type -->
           <div>
-            <label class="mb-1.5 block text-sm font-medium text-gray-700">
+            <label class="mb-1.5 block text-sm font-medium text-night-600">
               Type
             </label>
 
             <select
               v-model="type"
-              class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+              class="w-full rounded-lg border border-line-strong px-3 py-2.5 text-sm outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-200"
             >
               <option value="">Tous les appels</option>
               <option value="incoming">Entrants</option>
@@ -218,13 +219,13 @@ const clientName = (client) => {
 
           <!-- Statut -->
           <div>
-            <label class="mb-1.5 block text-sm font-medium text-gray-700">
+            <label class="mb-1.5 block text-sm font-medium text-night-600">
               Statut
             </label>
 
             <select
               v-model="status"
-              class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+              class="w-full rounded-lg border border-line-strong px-3 py-2.5 text-sm outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-200"
             >
               <option value="">Tous les statuts</option>
               <option value="answered">Répondu</option>
@@ -239,7 +240,7 @@ const clientName = (client) => {
         <div v-if="hasFilters" class="mt-4 flex justify-end">
           <button
             type="button"
-            class="text-sm font-medium text-indigo-600 hover:text-indigo-800"
+            class="text-sm font-medium text-brand-600 hover:text-brand-800"
             @click="resetFilters"
           >
             Réinitialiser les filtres
@@ -249,77 +250,77 @@ const clientName = (client) => {
 
       <!-- Tableau -->
       <div
-        class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
+        class="overflow-hidden rounded-xl border border-line bg-white shadow-sm"
       >
         <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+          <table class="min-w-full divide-y divide-line">
+            <thead class="bg-canvas-sunken">
               <tr>
                 <th
-                  class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                  class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-night-400"
                 >
                   Client
                 </th>
 
                 <th
-                  class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                  class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-night-400"
                 >
                   Type
                 </th>
 
                 <th
-                  class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                  class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-night-400"
                 >
                   Statut
                 </th>
 
                 <th
-                  class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                  class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-night-400"
                 >
                   Agent
                 </th>
 
                 <th
-                  class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                  class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-night-400"
                 >
                   Durée
                 </th>
 
                 <th
-                  class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                  class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-night-400"
                 >
                   Date
                 </th>
 
                 <th
-                  class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500"
+                  class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-night-400"
                 >
                   Action
                 </th>
               </tr>
             </thead>
 
-            <tbody class="divide-y divide-gray-200 bg-white">
+            <tbody class="divide-y divide-line bg-white">
               <tr
                 v-for="call in calls.data"
                 :key="call.id"
-                class="transition hover:bg-gray-50"
+                class="transition hover:bg-canvas-sunken"
               >
                 <!-- Client -->
                 <td class="whitespace-nowrap px-6 py-4">
                   <div class="flex items-center">
                     <div
-                      class="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 font-semibold text-indigo-700"
+                      class="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 font-semibold text-brand-700"
                     >
                       {{ clientName(call.client).charAt(0).toUpperCase() }}
                     </div>
 
                     <div class="ml-3">
-                      <div class="text-sm font-semibold text-gray-900">
+                      <div class="text-sm font-semibold text-night-900">
                         {{ clientName(call.client) }}
                       </div>
 
-                      <div class="text-sm text-gray-500">
+                      <div class="text-sm text-night-400">
                         {{ call.phone }}
                       </div>
                     </div>
@@ -347,17 +348,17 @@ const clientName = (client) => {
                 </td>
 
                 <!-- Agent -->
-                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-700">
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-night-600">
                   {{ call.user?.name || "Non attribué" }}
                 </td>
 
                 <!-- Durée -->
-                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-700">
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-night-600">
                   {{ formatDuration(call.duration) }}
                 </td>
 
                 <!-- Date -->
-                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-night-500">
                   {{ formatDate(call.started_at) }}
                 </td>
 
@@ -365,7 +366,7 @@ const clientName = (client) => {
                 <td class="whitespace-nowrap px-6 py-4 text-right">
                   <Link
                     :href="route('calls.show', call.id)"
-                    class="font-medium text-indigo-600 hover:text-indigo-800"
+                    class="font-medium text-brand-600 hover:text-brand-800"
                   >
                     Voir
                   </Link>
@@ -375,7 +376,7 @@ const clientName = (client) => {
               <!-- Aucun appel -->
               <tr v-if="calls.data.length === 0">
                 <td colspan="7" class="px-6 py-12 text-center">
-                  <div class="text-gray-400">
+                  <div class="text-night-300">
                     <svg
                       class="mx-auto h-12 w-12"
                       fill="none"
@@ -390,11 +391,11 @@ const clientName = (client) => {
                       />
                     </svg>
 
-                    <p class="mt-3 text-sm font-medium text-gray-600">
+                    <p class="mt-3 text-sm font-medium text-night-500">
                       Aucun appel trouvé
                     </p>
 
-                    <p class="mt-1 text-sm text-gray-400">
+                    <p class="mt-1 text-sm text-night-300">
                       Commencez par enregistrer un nouvel appel.
                     </p>
                   </div>
@@ -407,7 +408,7 @@ const clientName = (client) => {
         <!-- Pagination -->
         <div
           v-if="calls.links && calls.links.length > 3"
-          class="border-t border-gray-200 px-6 py-4"
+          class="border-t border-line px-6 py-4"
         >
           <div class="flex flex-wrap items-center justify-center gap-1">
             <template v-for="(link, index) in calls.links" :key="index">
@@ -418,15 +419,15 @@ const clientName = (client) => {
                 class="rounded-lg px-3 py-2 text-sm transition"
                 :class="
                   link.active
-                    ? 'bg-indigo-600 font-semibold text-white'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    ? 'bg-brand-500 font-semibold text-white'
+                    : 'text-night-500 hover:bg-canvas-sunken'
                 "
                 v-html="link.label"
               />
 
               <span
                 v-else
-                class="rounded-lg px-3 py-2 text-sm text-gray-300"
+                class="rounded-lg px-3 py-2 text-sm text-night-200"
                 v-html="link.label"
               />
             </template>
@@ -434,5 +435,5 @@ const clientName = (client) => {
         </div>
       </div>
     </div>
-  </div>
+  </AuthenticatedLayout>
 </template>

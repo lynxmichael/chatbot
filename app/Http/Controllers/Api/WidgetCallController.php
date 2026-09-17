@@ -8,6 +8,7 @@ use App\Models\Client;
 use App\Models\Conversation;
 use App\Models\Organization;
 use App\Models\User;
+use App\Services\AI\Usage\UsageMeter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -30,9 +31,22 @@ class WidgetCallController extends Controller
      */
     private const RING_TIMEOUT = 45;
 
-    public function start(Request $request): JsonResponse
+    public function start(Request $request, UsageMeter $usage): JsonResponse
     {
         $organization = $this->organizationFromToken($request);
+
+        /*
+         * La voix est le poste le plus coûteux : son plafond est vérifié
+         * avant même de chercher un agent.
+         */
+        if (!$usage->allows($organization, 'voice_calls')) {
+            return response()->json([
+                'success' => false,
+                'status' => 'unavailable',
+                'message' => "L'appel n'est pas disponible pour le moment. "
+                    . "Écrivez-nous, nous vous répondons tout de suite.",
+            ], 200);
+        }
 
         $validated = $request->validate([
             'conversation_id' => ['nullable', 'integer'],
@@ -190,6 +204,10 @@ class WidgetCallController extends Controller
 
         $call = $result['call'];
 
+        if (!$result['reused'] && $call->status === 'ringing') {
+            $usage->record($organization, ['voice_calls' => 1]);
+        }
+
         return response()->json([
             'success' => true,
             'call_id' => $call->id,
@@ -215,8 +233,11 @@ class WidgetCallController extends Controller
     /**
      * Le client raccroche.
      */
-    public function end(Request $request, Call $call): JsonResponse
-    {
+    public function end(
+        Request $request,
+        Call $call,
+        UsageMeter $usage
+    ): JsonResponse {
         $organization = $this->organizationFromToken($request);
 
         $this->authorizeCall($organization, $call);
@@ -237,11 +258,17 @@ class WidgetCallController extends Controller
          */
         $wasAnswered = $call->status === 'answered';
 
+        $duration = $this->duration($call);
+
         $call->update([
             'status' => $wasAnswered ? 'completed' : 'cancelled',
-            'duration' => $this->duration($call),
+            'duration' => $duration,
             'ended_at' => now(),
         ]);
+
+        if ($wasAnswered && $duration > 0) {
+            $usage->record($organization, ['voice_seconds' => $duration]);
+        }
 
         return response()->json([
             'success' => true,

@@ -94,17 +94,17 @@ const channelLabels = {
 
 const statusClasses = {
     open: "bg-blue-100 text-blue-700",
-    pending: "bg-yellow-100 text-yellow-700",
+    pending: "bg-amber-100 text-amber-700",
     in_progress: "bg-purple-100 text-purple-700",
-    resolved: "bg-green-100 text-green-700",
-    closed: "bg-gray-100 text-gray-700",
+    resolved: "bg-emerald-100 text-emerald-700",
+    closed: "bg-canvas-sunken text-night-600",
 };
 
 const priorityClasses = {
-    low: "bg-gray-100 text-gray-700",
+    low: "bg-canvas-sunken text-night-600",
     normal: "bg-blue-100 text-blue-700",
     high: "bg-orange-100 text-orange-700",
-    urgent: "bg-red-100 text-red-700",
+    urgent: "bg-rose-100 text-rose-700",
 };
 
 /*
@@ -144,14 +144,14 @@ const channelLabel = computed(() => {
 const statusClass = computed(() => {
     return (
         statusClasses[ticket.value?.status] ??
-        "bg-gray-100 text-gray-700"
+        "bg-canvas-sunken text-night-600"
     );
 });
 
 const priorityClass = computed(() => {
     return (
         priorityClasses[ticket.value?.priority] ??
-        "bg-gray-100 text-gray-700"
+        "bg-canvas-sunken text-night-600"
     );
 });
 
@@ -307,17 +307,17 @@ const saveResolution = () => {
                         <div class="mb-2 flex items-center gap-2">
                             <Link
                                 :href="route('tickets.index')"
-                                class="text-sm font-medium text-gray-500 hover:text-gray-700"
+                                class="text-sm font-medium text-night-400 hover:text-night-600"
                             >
                                 ← Retour aux tickets
                             </Link>
                         </div>
 
-                        <h1 class="text-2xl font-bold text-gray-900">
+                        <h1 class="text-2xl font-bold text-night-900">
                             Ticket {{ ticket.ticket_number }}
                         </h1>
 
-                        <p class="mt-1 text-sm text-gray-500">
+                        <p class="mt-1 text-sm text-night-400">
                             Créé le {{ formatDate(ticket.created_at) }}
                         </p>
                     </div>
@@ -325,7 +325,7 @@ const saveResolution = () => {
                 <div class="flex flex-wrap gap-2">
     <Link
         :href="route('tickets.edit', ticket.id)"
-        class="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+        class="inline-flex items-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-600"
     >
         Modifier
     </Link>
@@ -334,7 +334,7 @@ const saveResolution = () => {
         v-if="canDelete"
         type="button"
         @click="deleteTicket"
-        class="inline-flex items-center rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700"
+        class="inline-flex items-center rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-rose-700"
     >
         Supprimer
     </button>
@@ -343,9 +343,9 @@ const saveResolution = () => {
 
                 <!-- TICKET HEADER -->
                 <div
-                    class="mb-6 overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200"
+                    class="mb-6 overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-line"
                 >
-                    <div class="border-b border-gray-200 p-6">
+                    <div class="border-b border-line p-6">
                         <div
                             class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"
                         >
@@ -366,31 +366,31 @@ const saveResolution = () => {
                                     </span>
 
                                     <span
-                                        class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700"
+                                        class="inline-flex items-center rounded-full bg-canvas-sunken px-3 py-1 text-xs font-semibold text-night-600"
                                     >
                                         {{ categoryLabel }}
                                     </span>
 
                                     <span
-                                        class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700"
+                                        class="inline-flex items-center rounded-full bg-canvas-sunken px-3 py-1 text-xs font-semibold text-night-600"
                                     >
                                         {{ channelLabel }}
                                     </span>
                                 </div>
 
                                 <h2
-                                    class="break-words text-xl font-semibold text-gray-900"
+                                    class="break-words text-xl font-semibold text-night-900"
                                 >
                                     {{ ticket.subject || "Sans sujet" }}
                                 </h2>
                             </div>
 
-                            <div class="text-sm text-gray-500 lg:text-right">
+                            <div class="text-sm text-night-400 lg:text-right">
                                 <div>
                                     Dernière modification :
                                 </div>
 
-                                <div class="font-medium text-gray-700">
+                                <div class="font-medium text-night-600">
                                     {{ formatDate(ticket.updated_at) }}
                                 </div>
                             </div>
@@ -398,12 +398,12 @@ const saveResolution = () => {
                     </div>
 
                     <!-- ACTIONS RAPIDES -->
-                    <div class="bg-gray-50 p-4">
+                    <div class="bg-canvas-sunken p-4">
                         <div class="grid gap-4 lg:grid-cols-3">
                             <!-- STATUS -->
                             <div>
                                 <label
-                                    class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                                    class="mb-2 block text-xs font-semibold uppercase tracking-wide text-night-400"
                                 >
                                     Statut
                                 </label>
@@ -422,7 +422,7 @@ const saveResolution = () => {
                                         type="button"
                                         @click="setStatus('pending')"
                                         :disabled="form.processing"
-                                        class="rounded-lg bg-yellow-100 px-3 py-2 text-xs font-semibold text-yellow-700 hover:bg-yellow-200 disabled:opacity-50"
+                                        class="rounded-lg bg-amber-100 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-200 disabled:opacity-50"
                                     >
                                         En attente
                                     </button>
@@ -440,7 +440,7 @@ const saveResolution = () => {
                                         type="button"
                                         @click="setStatus('resolved')"
                                         :disabled="form.processing"
-                                        class="rounded-lg bg-green-100 px-3 py-2 text-xs font-semibold text-green-700 hover:bg-green-200 disabled:opacity-50"
+                                        class="rounded-lg bg-emerald-100 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-200 disabled:opacity-50"
                                     >
                                         Résolu
                                     </button>
@@ -449,7 +449,7 @@ const saveResolution = () => {
                                         type="button"
                                         @click="setStatus('closed')"
                                         :disabled="form.processing"
-                                        class="rounded-lg bg-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-300 disabled:opacity-50"
+                                        class="rounded-lg bg-night-100 px-3 py-2 text-xs font-semibold text-night-600 hover:bg-night-200 disabled:opacity-50"
                                     >
                                         Fermé
                                     </button>
@@ -459,7 +459,7 @@ const saveResolution = () => {
                             <!-- PRIORITE -->
                             <div>
                                 <label
-                                    class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                                    class="mb-2 block text-xs font-semibold uppercase tracking-wide text-night-400"
                                 >
                                     Priorité
                                 </label>
@@ -469,7 +469,7 @@ const saveResolution = () => {
                                         type="button"
                                         @click="setPriority('low')"
                                         :disabled="form.processing"
-                                        class="rounded-lg bg-gray-100 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+                                        class="rounded-lg bg-canvas-sunken px-3 py-2 text-xs font-semibold text-night-600 hover:bg-night-100 disabled:opacity-50"
                                     >
                                         Faible
                                     </button>
@@ -496,7 +496,7 @@ const saveResolution = () => {
                                         type="button"
                                         @click="setPriority('urgent')"
                                         :disabled="form.processing"
-                                        class="rounded-lg bg-red-100 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-200 disabled:opacity-50"
+                                        class="rounded-lg bg-rose-100 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-200 disabled:opacity-50"
                                     >
                                         Urgente
                                     </button>
@@ -507,7 +507,7 @@ const saveResolution = () => {
                             <div>
                                 <label
                                     for="quick_assigned_to"
-                                    class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                                    class="mb-2 block text-xs font-semibold uppercase tracking-wide text-night-400"
                                 >
                                     Agent
                                 </label>
@@ -525,7 +525,7 @@ const saveResolution = () => {
                                         )
                                     "
                                     :disabled="form.processing"
-                                    class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-50"
+                                    class="w-full rounded-lg border-line-strong text-sm shadow-sm focus:border-brand-400 focus:ring-brand-400 disabled:opacity-50"
                                 >
                                     <option value="">
                                         Non attribué
@@ -550,13 +550,13 @@ const saveResolution = () => {
                     <div class="space-y-6 lg:col-span-2">
                         <!-- DESCRIPTION -->
                         <div
-                            class="rounded-xl bg-white shadow-sm ring-1 ring-gray-200"
+                            class="rounded-xl bg-white shadow-sm ring-1 ring-line"
                         >
                             <div
-                                class="border-b border-gray-200 px-6 py-4"
+                                class="border-b border-line px-6 py-4"
                             >
                                 <h3
-                                    class="text-base font-semibold text-gray-900"
+                                    class="text-base font-semibold text-night-900"
                                 >
                                     Description
                                 </h3>
@@ -564,7 +564,7 @@ const saveResolution = () => {
 
                             <div class="p-6">
                                 <div
-                                    class="whitespace-pre-wrap break-words text-sm leading-7 text-gray-700"
+                                    class="whitespace-pre-wrap break-words text-sm leading-7 text-night-600"
                                 >
                                     {{
                                         ticket.description ||
@@ -576,20 +576,20 @@ const saveResolution = () => {
 
                         <!-- RESOLUTION -->
                         <div
-                            class="rounded-xl bg-white shadow-sm ring-1 ring-gray-200"
+                            class="rounded-xl bg-white shadow-sm ring-1 ring-line"
                         >
                             <div
-                                class="flex flex-col gap-3 border-b border-gray-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between"
+                                class="flex flex-col gap-3 border-b border-line px-6 py-4 sm:flex-row sm:items-center sm:justify-between"
                             >
                                 <div>
                                     <h3
-                                        class="text-base font-semibold text-gray-900"
+                                        class="text-base font-semibold text-night-900"
                                     >
                                         Résolution
                                     </h3>
 
                                     <p
-                                        class="mt-1 text-xs text-gray-500"
+                                        class="mt-1 text-xs text-night-400"
                                     >
                                         Ajoutez les informations relatives
                                         à la résolution du ticket.
@@ -601,13 +601,13 @@ const saveResolution = () => {
                                 <textarea
                                     v-model="form.resolution"
                                     rows="6"
-                                    class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    class="w-full rounded-lg border-line-strong text-sm shadow-sm focus:border-brand-400 focus:ring-brand-400"
                                     placeholder="Décrivez la solution apportée au client..."
                                 ></textarea>
 
                                 <div
                                     v-if="form.errors.resolution"
-                                    class="mt-2 text-sm text-red-600"
+                                    class="mt-2 text-sm text-rose-600"
                                 >
                                     {{ form.errors.resolution }}
                                 </div>
@@ -617,7 +617,7 @@ const saveResolution = () => {
                                         type="button"
                                         @click="saveResolution"
                                         :disabled="form.processing"
-                                        class="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                        class="inline-flex items-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         {{
                                             form.processing
@@ -632,13 +632,13 @@ const saveResolution = () => {
                         <!-- CONVERSATION -->
                         <div
                             v-if="conversation"
-                            class="rounded-xl bg-white shadow-sm ring-1 ring-gray-200"
+                            class="rounded-xl bg-white shadow-sm ring-1 ring-line"
                         >
                             <div
-                                class="border-b border-gray-200 px-6 py-4"
+                                class="border-b border-line px-6 py-4"
                             >
                                 <h3
-                                    class="text-base font-semibold text-gray-900"
+                                    class="text-base font-semibold text-night-900"
                                 >
                                     Conversation associée
                                 </h3>
@@ -650,7 +650,7 @@ const saveResolution = () => {
                                 >
                                     <div>
                                         <p
-                                            class="text-sm font-semibold text-gray-900"
+                                            class="text-sm font-semibold text-night-900"
                                         >
                                             {{
                                                 conversation.subject ||
@@ -659,7 +659,7 @@ const saveResolution = () => {
                                         </p>
 
                                         <p
-                                            class="mt-1 text-xs text-gray-500"
+                                            class="mt-1 text-xs text-night-400"
                                         >
                                             Conversation #{{
                                                 conversation.id
@@ -680,7 +680,7 @@ const saveResolution = () => {
                                                 conversation.id
                                             )
                                         "
-                                        class="inline-flex items-center justify-center rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                        class="inline-flex items-center justify-center rounded-lg border border-line-strong px-3 py-2 text-sm font-medium text-night-600 hover:bg-canvas-sunken"
                                     >
                                         Voir la conversation
                                     </Link>
@@ -691,13 +691,13 @@ const saveResolution = () => {
                                 >
                                     <div>
                                         <p
-                                            class="text-xs font-medium uppercase tracking-wide text-gray-500"
+                                            class="text-xs font-medium uppercase tracking-wide text-night-400"
                                         >
                                             Canal
                                         </p>
 
                                         <p
-                                            class="mt-1 text-sm font-semibold text-gray-900"
+                                            class="mt-1 text-sm font-semibold text-night-900"
                                         >
                                             {{
                                                 channelLabels[
@@ -711,13 +711,13 @@ const saveResolution = () => {
 
                                     <div>
                                         <p
-                                            class="text-xs font-medium uppercase tracking-wide text-gray-500"
+                                            class="text-xs font-medium uppercase tracking-wide text-night-400"
                                         >
                                             Statut
                                         </p>
 
                                         <p
-                                            class="mt-1 text-sm font-semibold text-gray-900"
+                                            class="mt-1 text-sm font-semibold text-night-900"
                                         >
                                             {{
                                                 statusLabels[
@@ -731,13 +731,13 @@ const saveResolution = () => {
 
                                     <div>
                                         <p
-                                            class="text-xs font-medium uppercase tracking-wide text-gray-500"
+                                            class="text-xs font-medium uppercase tracking-wide text-night-400"
                                         >
                                             Dernier message
                                         </p>
 
                                         <p
-                                            class="mt-1 text-sm font-semibold text-gray-900"
+                                            class="mt-1 text-sm font-semibold text-night-900"
                                         >
                                             {{
                                                 formatDate(
@@ -755,13 +755,13 @@ const saveResolution = () => {
                     <div class="space-y-6">
                         <!-- CLIENT -->
                         <div
-                            class="rounded-xl bg-white shadow-sm ring-1 ring-gray-200"
+                            class="rounded-xl bg-white shadow-sm ring-1 ring-line"
                         >
                             <div
-                                class="border-b border-gray-200 px-6 py-4"
+                                class="border-b border-line px-6 py-4"
                             >
                                 <h3
-                                    class="text-base font-semibold text-gray-900"
+                                    class="text-base font-semibold text-night-900"
                                 >
                                     Client
                                 </h3>
@@ -770,7 +770,7 @@ const saveResolution = () => {
                             <div class="p-6">
                                 <div class="mb-4">
                                     <div
-                                        class="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 text-lg font-bold text-indigo-700"
+                                        class="flex h-12 w-12 items-center justify-center rounded-full bg-brand-100 text-lg font-bold text-brand-700"
                                     >
                                         {{
                                             clientName
@@ -781,14 +781,14 @@ const saveResolution = () => {
                                 </div>
 
                                 <h4
-                                    class="break-words text-base font-semibold text-gray-900"
+                                    class="break-words text-base font-semibold text-night-900"
                                 >
                                     {{ clientName }}
                                 </h4>
 
                                 <div
                                     v-if="client?.company"
-                                    class="mt-1 text-sm text-gray-500"
+                                    class="mt-1 text-sm text-night-400"
                                 >
                                     {{ client.company }}
                                 </div>
@@ -796,14 +796,14 @@ const saveResolution = () => {
                                 <div class="mt-4 space-y-3">
                                     <div v-if="client?.email">
                                         <p
-                                            class="text-xs font-medium uppercase tracking-wide text-gray-500"
+                                            class="text-xs font-medium uppercase tracking-wide text-night-400"
                                         >
                                             Email
                                         </p>
 
                                         <a
                                             :href="`mailto:${client.email}`"
-                                            class="mt-1 block break-all text-sm text-indigo-600 hover:text-indigo-800"
+                                            class="mt-1 block break-all text-sm text-brand-600 hover:text-brand-800"
                                         >
                                             {{ client.email }}
                                         </a>
@@ -811,14 +811,14 @@ const saveResolution = () => {
 
                                     <div v-if="client?.phone">
                                         <p
-                                            class="text-xs font-medium uppercase tracking-wide text-gray-500"
+                                            class="text-xs font-medium uppercase tracking-wide text-night-400"
                                         >
                                             Téléphone
                                         </p>
 
                                         <a
                                             :href="`tel:${client.phone}`"
-                                            class="mt-1 block text-sm text-indigo-600 hover:text-indigo-800"
+                                            class="mt-1 block text-sm text-brand-600 hover:text-brand-800"
                                         >
                                             {{ client.phone }}
                                         </a>
@@ -831,13 +831,13 @@ const saveResolution = () => {
                                         "
                                     >
                                         <p
-                                            class="text-xs font-medium uppercase tracking-wide text-gray-500"
+                                            class="text-xs font-medium uppercase tracking-wide text-night-400"
                                         >
                                             Localisation
                                         </p>
 
                                         <p
-                                            class="mt-1 text-sm text-gray-700"
+                                            class="mt-1 text-sm text-night-600"
                                         >
                                             {{
                                                 [
@@ -855,13 +855,13 @@ const saveResolution = () => {
 
                         <!-- AGENT -->
                         <div
-                            class="rounded-xl bg-white shadow-sm ring-1 ring-gray-200"
+                            class="rounded-xl bg-white shadow-sm ring-1 ring-line"
                         >
                             <div
-                                class="border-b border-gray-200 px-6 py-4"
+                                class="border-b border-line px-6 py-4"
                             >
                                 <h3
-                                    class="text-base font-semibold text-gray-900"
+                                    class="text-base font-semibold text-night-900"
                                 >
                                     Agent assigné
                                 </h3>
@@ -873,7 +873,7 @@ const saveResolution = () => {
                                     class="flex items-center gap-3"
                                 >
                                     <div
-                                        class="flex h-11 w-11 items-center justify-center rounded-full bg-green-100 font-bold text-green-700"
+                                        class="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-100 font-bold text-emerald-700"
                                     >
                                         {{
                                             getAgentName(
@@ -886,7 +886,7 @@ const saveResolution = () => {
 
                                     <div class="min-w-0">
                                         <p
-                                            class="truncate text-sm font-semibold text-gray-900"
+                                            class="truncate text-sm font-semibold text-night-900"
                                         >
                                             {{
                                                 getAgentName(
@@ -897,7 +897,7 @@ const saveResolution = () => {
 
                                         <p
                                             v-if="assignedAgent.email"
-                                            class="truncate text-xs text-gray-500"
+                                            class="truncate text-xs text-night-400"
                                         >
                                             {{ assignedAgent.email }}
                                         </p>
@@ -906,7 +906,7 @@ const saveResolution = () => {
 
                                 <div
                                     v-else
-                                    class="rounded-lg bg-yellow-50 p-4 text-sm text-yellow-700"
+                                    class="rounded-lg bg-amber-50 p-4 text-sm text-amber-700"
                                 >
                                     Aucun agent n'est actuellement
                                     assigné à ce ticket.
@@ -916,28 +916,28 @@ const saveResolution = () => {
 
                         <!-- INFORMATIONS -->
                         <div
-                            class="rounded-xl bg-white shadow-sm ring-1 ring-gray-200"
+                            class="rounded-xl bg-white shadow-sm ring-1 ring-line"
                         >
                             <div
-                                class="border-b border-gray-200 px-6 py-4"
+                                class="border-b border-line px-6 py-4"
                             >
                                 <h3
-                                    class="text-base font-semibold text-gray-900"
+                                    class="text-base font-semibold text-night-900"
                                 >
                                     Informations
                                 </h3>
                             </div>
 
-                            <div class="divide-y divide-gray-100">
+                            <div class="divide-y divide-line">
                                 <div class="px-6 py-4">
                                     <p
-                                        class="text-xs font-medium uppercase tracking-wide text-gray-500"
+                                        class="text-xs font-medium uppercase tracking-wide text-night-400"
                                     >
                                         Numéro
                                     </p>
 
                                     <p
-                                        class="mt-1 font-mono text-sm font-semibold text-gray-900"
+                                        class="mt-1 font-mono text-sm font-semibold text-night-900"
                                     >
                                         {{ ticket.ticket_number }}
                                     </p>
@@ -945,13 +945,13 @@ const saveResolution = () => {
 
                                 <div class="px-6 py-4">
                                     <p
-                                        class="text-xs font-medium uppercase tracking-wide text-gray-500"
+                                        class="text-xs font-medium uppercase tracking-wide text-night-400"
                                     >
                                         Catégorie
                                     </p>
 
                                     <p
-                                        class="mt-1 text-sm font-semibold text-gray-900"
+                                        class="mt-1 text-sm font-semibold text-night-900"
                                     >
                                         {{ categoryLabel }}
                                     </p>
@@ -959,13 +959,13 @@ const saveResolution = () => {
 
                                 <div class="px-6 py-4">
                                     <p
-                                        class="text-xs font-medium uppercase tracking-wide text-gray-500"
+                                        class="text-xs font-medium uppercase tracking-wide text-night-400"
                                     >
                                         Canal
                                     </p>
 
                                     <p
-                                        class="mt-1 text-sm font-semibold text-gray-900"
+                                        class="mt-1 text-sm font-semibold text-night-900"
                                     >
                                         {{ channelLabel }}
                                     </p>
@@ -973,13 +973,13 @@ const saveResolution = () => {
 
                                 <div class="px-6 py-4">
                                     <p
-                                        class="text-xs font-medium uppercase tracking-wide text-gray-500"
+                                        class="text-xs font-medium uppercase tracking-wide text-night-400"
                                     >
                                         Création
                                     </p>
 
                                     <p
-                                        class="mt-1 text-sm text-gray-700"
+                                        class="mt-1 text-sm text-night-600"
                                     >
                                         {{ formatDate(ticket.created_at) }}
                                     </p>
@@ -987,13 +987,13 @@ const saveResolution = () => {
 
                                 <div class="px-6 py-4">
                                     <p
-                                        class="text-xs font-medium uppercase tracking-wide text-gray-500"
+                                        class="text-xs font-medium uppercase tracking-wide text-night-400"
                                     >
                                         SLA
                                     </p>
 
                                     <p
-                                        class="mt-1 text-sm font-semibold text-gray-900"
+                                        class="mt-1 text-sm font-semibold text-night-900"
                                     >
                                         {{
                                             formatDate(
@@ -1007,13 +1007,13 @@ const saveResolution = () => {
 
                         <!-- DATES -->
                         <div
-                            class="rounded-xl bg-white shadow-sm ring-1 ring-gray-200"
+                            class="rounded-xl bg-white shadow-sm ring-1 ring-line"
                         >
                             <div
-                                class="border-b border-gray-200 px-6 py-4"
+                                class="border-b border-line px-6 py-4"
                             >
                                 <h3
-                                    class="text-base font-semibold text-gray-900"
+                                    class="text-base font-semibold text-night-900"
                                 >
                                     Historique
                                 </h3>
@@ -1022,13 +1022,13 @@ const saveResolution = () => {
                             <div class="space-y-4 p-6">
                                 <div>
                                     <p
-                                        class="text-xs font-medium uppercase tracking-wide text-gray-500"
+                                        class="text-xs font-medium uppercase tracking-wide text-night-400"
                                     >
                                         Créé
                                     </p>
 
                                     <p
-                                        class="mt-1 text-sm text-gray-700"
+                                        class="mt-1 text-sm text-night-600"
                                     >
                                         {{ formatDate(ticket.created_at) }}
                                     </p>
@@ -1036,13 +1036,13 @@ const saveResolution = () => {
 
                                 <div>
                                     <p
-                                        class="text-xs font-medium uppercase tracking-wide text-gray-500"
+                                        class="text-xs font-medium uppercase tracking-wide text-night-400"
                                     >
                                         Mis à jour
                                     </p>
 
                                     <p
-                                        class="mt-1 text-sm text-gray-700"
+                                        class="mt-1 text-sm text-night-600"
                                     >
                                         {{ formatDate(ticket.updated_at) }}
                                     </p>
@@ -1052,13 +1052,13 @@ const saveResolution = () => {
                                     v-if="ticket.first_response_at"
                                 >
                                     <p
-                                        class="text-xs font-medium uppercase tracking-wide text-gray-500"
+                                        class="text-xs font-medium uppercase tracking-wide text-night-400"
                                     >
                                         Première réponse
                                     </p>
 
                                     <p
-                                        class="mt-1 text-sm text-gray-700"
+                                        class="mt-1 text-sm text-night-600"
                                     >
                                         {{
                                             formatDate(
@@ -1070,13 +1070,13 @@ const saveResolution = () => {
 
                                 <div v-if="ticket.resolved_at">
                                     <p
-                                        class="text-xs font-medium uppercase tracking-wide text-gray-500"
+                                        class="text-xs font-medium uppercase tracking-wide text-night-400"
                                     >
                                         Résolu le
                                     </p>
 
                                     <p
-                                        class="mt-1 text-sm text-gray-700"
+                                        class="mt-1 text-sm text-night-600"
                                     >
                                         {{
                                             formatDate(
@@ -1088,13 +1088,13 @@ const saveResolution = () => {
 
                                 <div v-if="ticket.closed_at">
                                     <p
-                                        class="text-xs font-medium uppercase tracking-wide text-gray-500"
+                                        class="text-xs font-medium uppercase tracking-wide text-night-400"
                                     >
                                         Fermé le
                                     </p>
 
                                     <p
-                                        class="mt-1 text-sm text-gray-700"
+                                        class="mt-1 text-sm text-night-600"
                                     >
                                         {{ formatDate(ticket.closed_at) }}
                                     </p>
@@ -1107,16 +1107,16 @@ const saveResolution = () => {
                 <!-- ERREURS FORMULAIRE -->
                 <div
                     v-if="Object.keys(form.errors).length"
-                    class="mt-6 rounded-xl border border-red-200 bg-red-50 p-4"
+                    class="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-4"
                 >
                     <h3
-                        class="text-sm font-semibold text-red-800"
+                        class="text-sm font-semibold text-rose-800"
                     >
                         Impossible d'enregistrer les modifications
                     </h3>
 
                     <ul
-                        class="mt-2 list-inside list-disc text-sm text-red-700"
+                        class="mt-2 list-inside list-disc text-sm text-rose-700"
                     >
                         <li
                             v-for="(error, field) in form.errors"
@@ -1133,12 +1133,12 @@ const saveResolution = () => {
                 >
                     <Link
                         :href="route('tickets.index')"
-                        class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+                        class="inline-flex items-center justify-center rounded-lg border border-line-strong bg-white px-4 py-2 text-sm font-medium text-night-600 shadow-sm hover:bg-canvas-sunken"
                     >
                         ← Retour à la liste
                     </Link>
 
-                    <div class="text-xs text-gray-500">
+                    <div class="text-xs text-night-400">
                         Dernière modification :
                         {{ formatShortDate(ticket.updated_at) }}
                     </div>

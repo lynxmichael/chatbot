@@ -55,19 +55,19 @@ const submit = () => {
             >
                 <div>
                     <h2
-                        class="text-xl font-semibold leading-tight text-gray-800"
+                        class="text-xl font-semibold leading-tight text-night-800"
                     >
                         Nouveau client
                     </h2>
 
-                    <p class="mt-1 text-sm text-gray-500">
+                    <p class="mt-1 text-sm text-night-400">
                         Ajoutez un nouveau client à votre organisation.
                     </p>
                 </div>
 
                 <Link
                     :href="route('clients.index')"
-                    class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                    class="inline-flex items-center justify-center rounded-xl border border-line-strong bg-white px-4 py-2.5 text-sm font-medium text-night-600 transition hover:bg-canvas-sunken"
                 >
                     ← Retour aux clients
                 </Link>
@@ -82,17 +82,17 @@ const submit = () => {
 
                 <div
                     v-if="hasErrors"
-                    class="p-4 mb-6 border border-red-200 rounded-xl bg-red-50"
+                    class="p-4 mb-6 border border-rose-200 rounded-xl bg-rose-50"
                 >
                     <div class="flex items-start gap-3">
                         <span class="text-lg">⚠️</span>
 
                         <div>
-                            <p class="font-semibold text-red-800">
+                            <p class="font-semibold text-rose-800">
                                 Vérifiez les informations saisies.
                             </p>
 
-                            <p class="mt-1 text-sm text-red-700">
+                            <p class="mt-1 text-sm text-rose-700">
                                 Certains champs nécessitent une correction.
                             </p>
                         </div>
@@ -102,27 +102,27 @@ const submit = () => {
                 <!-- Formulaire -->
 
                 <div
-                    class="overflow-hidden bg-white shadow-sm rounded-2xl ring-1 ring-gray-100"
+                    class="overflow-hidden bg-white shadow-sm rounded-2xl ring-1 ring-line"
                 >
                     <div
-                        class="px-6 py-6 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-white sm:px-8"
+                        class="px-6 py-6 border-b border-line bg-gradient-to-r from-brand-50 to-white sm:px-8"
                     >
                         <div class="flex items-center gap-4">
                             <div
-                                class="flex items-center justify-center w-12 h-12 text-xl bg-indigo-100 rounded-xl"
+                                class="flex items-center justify-center w-12 h-12 text-xl bg-brand-100 rounded-xl"
                             >
                                 👤
                             </div>
 
                             <div>
                                 <h1
-                                    class="text-lg font-semibold text-gray-900"
+                                    class="text-lg font-semibold text-night-900"
                                 >
                                     Informations du client
                                 </h1>
 
                                 <p
-                                    class="mt-1 text-sm text-gray-500"
+                                    class="mt-1 text-sm text-night-400"
                                 >
                                     Les champs marqués d’un astérisque sont
                                     obligatoires.
@@ -141,7 +141,7 @@ const submit = () => {
 
                         <section>
                             <h3
-                                class="mb-4 text-base font-semibold text-gray-900"
+                                class="mb-4 text-base font-semibold text-night-900"
                             >
                                 Identité
                             </h3>
@@ -154,10 +154,10 @@ const submit = () => {
                                 <div>
                                     <label
                                         for="first_name"
-                                        class="block text-sm font-medium text-gray-700"
+                                        class="block text-sm font-medium text-night-600"
                                     >
                                         Prénom
-                                        <span class="text-red-500">*</span>
+                                        <span class="text-rose-500">*</span>
                                     </label>
 
                                     <input
@@ -166,16 +166,16 @@ const submit = () => {
                                         type="text"
                                         autocomplete="given-name"
                                         required
-                                        class="mt-1.5 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        class="mt-1.5 block w-full rounded-xl border-line-strong shadow-sm focus:border-brand-400 focus:ring-brand-400"
                                         :class="{
-                                            'border-red-400 focus:border-red-500 focus:ring-red-500':
+                                            'border-rose-400 focus:border-rose-500 focus:ring-rose-500':
                                                 form.errors.first_name,
                                         }"
                                     />
 
                                     <p
                                         v-if="form.errors.first_name"
-                                        class="mt-1.5 text-sm text-red-600"
+                                        class="mt-1.5 text-sm text-rose-600"
                                     >
                                         {{ form.errors.first_name }}
                                     </p>
@@ -186,10 +186,10 @@ const submit = () => {
                                 <div>
                                     <label
                                         for="last_name"
-                                        class="block text-sm font-medium text-gray-700"
+                                        class="block text-sm font-medium text-night-600"
                                     >
                                         Nom
-                                        <span class="text-red-500">*</span>
+                                        <span class="text-rose-500">*</span>
                                     </label>
 
                                     <input
@@ -198,16 +198,16 @@ const submit = () => {
                                         type="text"
                                         autocomplete="family-name"
                                         required
-                                        class="mt-1.5 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        class="mt-1.5 block w-full rounded-xl border-line-strong shadow-sm focus:border-brand-400 focus:ring-brand-400"
                                         :class="{
-                                            'border-red-400 focus:border-red-500 focus:ring-red-500':
+                                            'border-rose-400 focus:border-rose-500 focus:ring-rose-500':
                                                 form.errors.last_name,
                                         }"
                                     />
 
                                     <p
                                         v-if="form.errors.last_name"
-                                        class="mt-1.5 text-sm text-red-600"
+                                        class="mt-1.5 text-sm text-rose-600"
                                     >
                                         {{ form.errors.last_name }}
                                     </p>
@@ -218,10 +218,10 @@ const submit = () => {
                                 <div>
                                     <label
                                         for="phone"
-                                        class="block text-sm font-medium text-gray-700"
+                                        class="block text-sm font-medium text-night-600"
                                     >
                                         Téléphone
-                                        <span class="text-red-500">*</span>
+                                        <span class="text-rose-500">*</span>
                                     </label>
 
                                     <input
@@ -231,16 +231,16 @@ const submit = () => {
                                         autocomplete="tel"
                                         required
                                         placeholder="+225 ..."
-                                        class="mt-1.5 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        class="mt-1.5 block w-full rounded-xl border-line-strong shadow-sm focus:border-brand-400 focus:ring-brand-400"
                                         :class="{
-                                            'border-red-400 focus:border-red-500 focus:ring-red-500':
+                                            'border-rose-400 focus:border-rose-500 focus:ring-rose-500':
                                                 form.errors.phone,
                                         }"
                                     />
 
                                     <p
                                         v-if="form.errors.phone"
-                                        class="mt-1.5 text-sm text-red-600"
+                                        class="mt-1.5 text-sm text-rose-600"
                                     >
                                         {{ form.errors.phone }}
                                     </p>
@@ -251,7 +251,7 @@ const submit = () => {
                                 <div>
                                     <label
                                         for="email"
-                                        class="block text-sm font-medium text-gray-700"
+                                        class="block text-sm font-medium text-night-600"
                                     >
                                         Email
                                     </label>
@@ -262,16 +262,16 @@ const submit = () => {
                                         type="email"
                                         autocomplete="email"
                                         placeholder="client@example.com"
-                                        class="mt-1.5 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        class="mt-1.5 block w-full rounded-xl border-line-strong shadow-sm focus:border-brand-400 focus:ring-brand-400"
                                         :class="{
-                                            'border-red-400 focus:border-red-500 focus:ring-red-500':
+                                            'border-rose-400 focus:border-rose-500 focus:ring-rose-500':
                                                 form.errors.email,
                                         }"
                                     />
 
                                     <p
                                         v-if="form.errors.email"
-                                        class="mt-1.5 text-sm text-red-600"
+                                        class="mt-1.5 text-sm text-rose-600"
                                     >
                                         {{ form.errors.email }}
                                     </p>
@@ -283,9 +283,9 @@ const submit = () => {
                              ENTREPRISE
                         =================================================== -->
 
-                        <section class="pt-8 border-t border-gray-100">
+                        <section class="pt-8 border-t border-line">
                             <h3
-                                class="mb-4 text-base font-semibold text-gray-900"
+                                class="mb-4 text-base font-semibold text-night-900"
                             >
                                 Informations professionnelles
                             </h3>
@@ -293,7 +293,7 @@ const submit = () => {
                             <div>
                                 <label
                                     for="company"
-                                    class="block text-sm font-medium text-gray-700"
+                                    class="block text-sm font-medium text-night-600"
                                 >
                                     Entreprise
                                 </label>
@@ -304,16 +304,16 @@ const submit = () => {
                                     type="text"
                                     autocomplete="organization"
                                     placeholder="Nom de l’entreprise"
-                                    class="mt-1.5 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    class="mt-1.5 block w-full rounded-xl border-line-strong shadow-sm focus:border-brand-400 focus:ring-brand-400"
                                     :class="{
-                                        'border-red-400 focus:border-red-500 focus:ring-red-500':
+                                        'border-rose-400 focus:border-rose-500 focus:ring-rose-500':
                                             form.errors.company,
                                     }"
                                 />
 
                                 <p
                                     v-if="form.errors.company"
-                                    class="mt-1.5 text-sm text-red-600"
+                                    class="mt-1.5 text-sm text-rose-600"
                                 >
                                     {{ form.errors.company }}
                                 </p>
@@ -324,9 +324,9 @@ const submit = () => {
                              LOCALISATION
                         =================================================== -->
 
-                        <section class="pt-8 border-t border-gray-100">
+                        <section class="pt-8 border-t border-line">
                             <h3
-                                class="mb-4 text-base font-semibold text-gray-900"
+                                class="mb-4 text-base font-semibold text-night-900"
                             >
                                 Localisation
                             </h3>
@@ -339,7 +339,7 @@ const submit = () => {
                                 <div class="md:col-span-2">
                                     <label
                                         for="address"
-                                        class="block text-sm font-medium text-gray-700"
+                                        class="block text-sm font-medium text-night-600"
                                     >
                                         Adresse
                                     </label>
@@ -350,16 +350,16 @@ const submit = () => {
                                         type="text"
                                         autocomplete="street-address"
                                         placeholder="Adresse complète"
-                                        class="mt-1.5 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        class="mt-1.5 block w-full rounded-xl border-line-strong shadow-sm focus:border-brand-400 focus:ring-brand-400"
                                         :class="{
-                                            'border-red-400 focus:border-red-500 focus:ring-red-500':
+                                            'border-rose-400 focus:border-rose-500 focus:ring-rose-500':
                                                 form.errors.address,
                                         }"
                                     />
 
                                     <p
                                         v-if="form.errors.address"
-                                        class="mt-1.5 text-sm text-red-600"
+                                        class="mt-1.5 text-sm text-rose-600"
                                     >
                                         {{ form.errors.address }}
                                     </p>
@@ -370,7 +370,7 @@ const submit = () => {
                                 <div>
                                     <label
                                         for="city"
-                                        class="block text-sm font-medium text-gray-700"
+                                        class="block text-sm font-medium text-night-600"
                                     >
                                         Ville
                                     </label>
@@ -381,16 +381,16 @@ const submit = () => {
                                         type="text"
                                         autocomplete="address-level2"
                                         placeholder="Abidjan"
-                                        class="mt-1.5 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        class="mt-1.5 block w-full rounded-xl border-line-strong shadow-sm focus:border-brand-400 focus:ring-brand-400"
                                         :class="{
-                                            'border-red-400 focus:border-red-500 focus:ring-red-500':
+                                            'border-rose-400 focus:border-rose-500 focus:ring-rose-500':
                                                 form.errors.city,
                                         }"
                                     />
 
                                     <p
                                         v-if="form.errors.city"
-                                        class="mt-1.5 text-sm text-red-600"
+                                        class="mt-1.5 text-sm text-rose-600"
                                     >
                                         {{ form.errors.city }}
                                     </p>
@@ -401,7 +401,7 @@ const submit = () => {
                                 <div>
                                     <label
                                         for="country"
-                                        class="block text-sm font-medium text-gray-700"
+                                        class="block text-sm font-medium text-night-600"
                                     >
                                         Pays
                                     </label>
@@ -412,16 +412,16 @@ const submit = () => {
                                         type="text"
                                         autocomplete="country-name"
                                         placeholder="Côte d’Ivoire"
-                                        class="mt-1.5 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        class="mt-1.5 block w-full rounded-xl border-line-strong shadow-sm focus:border-brand-400 focus:ring-brand-400"
                                         :class="{
-                                            'border-red-400 focus:border-red-500 focus:ring-red-500':
+                                            'border-rose-400 focus:border-rose-500 focus:ring-rose-500':
                                                 form.errors.country,
                                         }"
                                     />
 
                                     <p
                                         v-if="form.errors.country"
-                                        class="mt-1.5 text-sm text-red-600"
+                                        class="mt-1.5 text-sm text-rose-600"
                                     >
                                         {{ form.errors.country }}
                                     </p>
@@ -433,9 +433,9 @@ const submit = () => {
                              STATUT
                         =================================================== -->
 
-                        <section class="pt-8 border-t border-gray-100">
+                        <section class="pt-8 border-t border-line">
                             <h3
-                                class="mb-4 text-base font-semibold text-gray-900"
+                                class="mb-4 text-base font-semibold text-night-900"
                             >
                                 Gestion du client
                             </h3>
@@ -443,7 +443,7 @@ const submit = () => {
                             <div class="max-w-md">
                                 <label
                                     for="status"
-                                    class="block text-sm font-medium text-gray-700"
+                                    class="block text-sm font-medium text-night-600"
                                 >
                                     Statut
                                 </label>
@@ -451,9 +451,9 @@ const submit = () => {
                                 <select
                                     id="status"
                                     v-model="form.status"
-                                    class="mt-1.5 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    class="mt-1.5 block w-full rounded-xl border-line-strong shadow-sm focus:border-brand-400 focus:ring-brand-400"
                                     :class="{
-                                        'border-red-400 focus:border-red-500 focus:ring-red-500':
+                                        'border-rose-400 focus:border-rose-500 focus:ring-rose-500':
                                             form.errors.status,
                                     }"
                                 >
@@ -472,7 +472,7 @@ const submit = () => {
 
                                 <p
                                     v-if="form.errors.status"
-                                    class="mt-1.5 text-sm text-red-600"
+                                    class="mt-1.5 text-sm text-rose-600"
                                 >
                                     {{ form.errors.status }}
                                 </p>
@@ -483,9 +483,9 @@ const submit = () => {
                              NOTES
                         =================================================== -->
 
-                        <section class="pt-8 border-t border-gray-100">
+                        <section class="pt-8 border-t border-line">
                             <h3
-                                class="mb-4 text-base font-semibold text-gray-900"
+                                class="mb-4 text-base font-semibold text-night-900"
                             >
                                 Notes internes
                             </h3>
@@ -502,16 +502,16 @@ const submit = () => {
                                 v-model="form.notes"
                                 rows="5"
                                 placeholder="Informations supplémentaires concernant ce client..."
-                                class="block w-full border-gray-300 shadow-sm rounded-xl focus:border-indigo-500 focus:ring-indigo-500"
+                                class="block w-full border-line-strong shadow-sm rounded-xl focus:border-brand-400 focus:ring-brand-400"
                                 :class="{
-                                    'border-red-400 focus:border-red-500 focus:ring-red-500':
+                                    'border-rose-400 focus:border-rose-500 focus:ring-rose-500':
                                         form.errors.notes,
                                 }"
                             ></textarea>
 
                             <p
                                 v-if="form.errors.notes"
-                                class="mt-1.5 text-sm text-red-600"
+                                class="mt-1.5 text-sm text-rose-600"
                             >
                                 {{ form.errors.notes }}
                             </p>
@@ -522,11 +522,11 @@ const submit = () => {
                         =================================================== -->
 
                         <div
-                            class="flex flex-col-reverse gap-3 pt-6 border-t border-gray-100 sm:flex-row sm:justify-end"
+                            class="flex flex-col-reverse gap-3 pt-6 border-t border-line sm:flex-row sm:justify-end"
                         >
                             <Link
                                 :href="route('clients.index')"
-                                class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                                class="inline-flex items-center justify-center rounded-xl border border-line-strong bg-white px-5 py-2.5 text-sm font-medium text-night-600 transition hover:bg-canvas-sunken"
                             >
                                 Annuler
                             </Link>
@@ -534,7 +534,7 @@ const submit = () => {
                             <button
                                 type="submit"
                                 :disabled="form.processing"
-                                class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                class="inline-flex items-center justify-center rounded-xl bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <span
                                     v-if="form.processing"

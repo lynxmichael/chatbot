@@ -263,6 +263,12 @@ class TicketController extends Controller
             'agents' => $agents,
             'clients' => $clients,
 
+            /*
+             * Liste unique des catégories : la page ne doit pas en tenir
+             * une copie de son côté, sinon les deux divergent.
+             */
+            'categories' => config('ai.categories', []),
+
             'filters' => [
                 'search' => $request->input('search', ''),
                 'status' => $request->input('status', ''),

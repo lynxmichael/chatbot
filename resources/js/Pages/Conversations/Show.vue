@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { Head, Link, router, useForm } from "@inertiajs/vue3";
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 
 const props = defineProps({
     conversation: {
@@ -593,18 +594,18 @@ const messageClasses = (item) => {
 
 const bubbleClasses = (item) => {
     if (item.sender_type === "client") {
-        return "bg-gray-100 text-gray-900";
+        return "bg-canvas-sunken text-night-900";
     }
 
     if (item.sender_type === "ai") {
-        return "bg-indigo-600 text-white";
+        return "bg-brand-500 text-white";
     }
 
     if (item.sender_type === "agent") {
         return "bg-emerald-600 text-white";
     }
 
-    return "bg-gray-100 text-gray-900";
+    return "bg-canvas-sunken text-night-900";
 };
 
 /*
@@ -755,59 +756,42 @@ onUnmounted(() => {
 <template>
   <Head :title="conversation.subject || 'Conversation'" />
 
-  <div class="min-h-screen bg-gray-50">
-    <!-- Navigation -->
-    <nav class="border-b border-gray-200 bg-white">
-      <div
-        class="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8"
-      >
-        <div>
-          <h1 class="text-xl font-bold text-gray-900">
-            Gestion des conversations
-          </h1>
-
-          <p class="text-sm text-gray-500">Service client</p>
-        </div>
-
-        <div class="flex items-center gap-3">
-          <Link
-            :href="route('dashboard')"
-            class="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
-          >
-            Tableau de bord
-          </Link>
-
-          <Link
-            :href="route('conversations.index')"
-            class="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
-          >
-            Conversations
-          </Link>
-
-          <Link
-            :href="route('clients.index')"
-            class="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
-          >
-            Clients
-          </Link>
-
-          <Link
-            v-if="isOwner"
-            :href="route('agents.index')"
-            class="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
-          >
-            Agents
-          </Link>
-        </div>
-      </div>
-    </nav>
+  <AuthenticatedLayout>
 
     <!-- Contenu -->
-    <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <!--
+        Le titre était porté par la barre de navigation recopiée.
+        Celle-ci ayant disparu au profit du rail commun, la page
+        doit annoncer elle-même de quoi elle parle.
+      -->
+      <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div class="min-w-0">
+          <h1 class="truncate text-2xl font-semibold tracking-tight text-night-900">
+            {{ conversation.subject || "Conversation" }}
+          </h1>
+
+          <p class="mt-1 text-sm text-night-400">
+            {{
+              [conversation.client?.first_name, conversation.client?.last_name]
+                .filter(Boolean)
+                .join(" ") || "Client inconnu"
+            }}
+          </p>
+        </div>
+
+        <Link
+          :href="route('conversations.index')"
+          class="rounded-xl border border-line bg-white px-4 py-2 text-sm font-medium text-night-700 transition hover:bg-canvas-sunken"
+        >
+          Retour
+        </Link>
+      </div>
+
       <!-- Succès -->
       <div
         v-if="successMessage"
-        class="mb-5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700"
+        class="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
       >
         ✓ {{ successMessage }}
       </div>
@@ -815,7 +799,7 @@ onUnmounted(() => {
       <!-- Erreur -->
       <div
         v-if="errorMessage"
-        class="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+        class="mb-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
       >
         ⚠ {{ errorMessage }}
       </div>
@@ -823,19 +807,19 @@ onUnmounted(() => {
       <!-- Transfert vers un agent humain -->
       <div
         v-if="humanTransfer"
-        class="mb-5 rounded-xl border border-red-200 bg-red-50 p-4"
+        class="mb-5 rounded-xl border border-rose-200 bg-rose-50 p-4"
       >
         <div class="flex items-start gap-3">
           <div class="text-xl">👤</div>
           <div>
-            <h3 class="font-semibold text-red-800">
+            <h3 class="font-semibold text-rose-800">
               Conversation transférée à un agent humain
             </h3>
-            <p class="mt-1 text-sm text-red-700">
+            <p class="mt-1 text-sm text-rose-700">
               L'IA est désactivée pour cette conversation. Un agent humain peut
               maintenant prendre en charge la demande.
             </p>
-            <p class="mt-2 text-sm font-medium text-red-800">
+            <p class="mt-2 text-sm font-medium text-rose-800">
               Agent affecté : {{ assignedAgentName }}
             </p>
           </div>
@@ -845,19 +829,19 @@ onUnmounted(() => {
       <!-- État IA -->
       <div
         v-if="aiStatus === 'processing'"
-        class="mb-5 rounded-xl border border-indigo-200 bg-indigo-50 p-4"
+        class="mb-5 rounded-xl border border-brand-200 bg-brand-50 p-4"
       >
         <div class="flex items-center gap-3">
           <div
-            class="h-5 w-5 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600"
+            class="h-5 w-5 animate-spin rounded-full border-2 border-brand-200 border-t-brand-500"
           ></div>
 
           <div>
-            <p class="font-semibold text-indigo-800">
+            <p class="font-semibold text-brand-800">
               L'IA traite actuellement le message
             </p>
 
-            <p class="mt-1 text-sm text-indigo-600">
+            <p class="mt-1 text-sm text-brand-600">
               Claude analyse la conversation et prépare une réponse...
             </p>
           </div>
@@ -867,19 +851,19 @@ onUnmounted(() => {
       <!-- IA terminée -->
       <div
         v-if="aiStatus === 'completed'"
-        class="mb-5 rounded-xl border border-green-200 bg-green-50 p-4"
+        class="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4"
       >
         <div class="flex items-center gap-3">
           <div
-            class="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-600"
+            class="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-600"
           >
             ✓
           </div>
 
           <div>
-            <p class="font-semibold text-green-800">Réponse IA reçue</p>
+            <p class="font-semibold text-emerald-800">Réponse IA reçue</p>
 
-            <p class="mt-1 text-sm text-green-600">
+            <p class="mt-1 text-sm text-emerald-600">
               La réponse de Claude a été ajoutée à la conversation.
             </p>
           </div>
@@ -888,19 +872,19 @@ onUnmounted(() => {
       <!-- IA en erreur -->
       <div
         v-if="aiStatus === 'error'"
-        class="mb-5 rounded-xl border border-red-200 bg-red-50 p-4"
+        class="mb-5 rounded-xl border border-rose-200 bg-rose-50 p-4"
       >
         <div class="flex items-start gap-3">
           <div
-            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600"
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600"
           >
             ⚠
           </div>
 
           <div>
-            <p class="font-semibold text-red-800">Le traitement IA a échoué</p>
+            <p class="font-semibold text-rose-800">Le traitement IA a échoué</p>
 
-            <p class="mt-1 text-sm text-red-600">
+            <p class="mt-1 text-sm text-rose-600">
               Une erreur est survenue lors de la génération de la réponse.
             </p>
           </div>
@@ -911,7 +895,7 @@ onUnmounted(() => {
       <div class="mb-5">
         <Link
           :href="route('conversations.index')"
-          class="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-800"
+          class="inline-flex items-center text-sm font-medium text-brand-600 hover:text-brand-800"
         >
           ← Retour aux conversations
         </Link>
@@ -919,14 +903,14 @@ onUnmounted(() => {
 
       <!-- En-tête -->
       <div
-        class="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+        class="mb-6 rounded-xl border border-line bg-white p-5 shadow-sm"
       >
         <div
           class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
         >
           <div>
             <div class="flex flex-wrap items-center gap-2">
-              <h2 class="text-xl font-bold text-gray-900">
+              <h2 class="text-xl font-bold text-night-900">
                 {{ conversation.subject || "Sans objet" }}
               </h2>
 
@@ -934,12 +918,12 @@ onUnmounted(() => {
                 class="rounded-full px-3 py-1 text-xs font-semibold"
                 :class="
                   conversation.status === 'open'
-                    ? 'bg-green-100 text-green-700'
+                    ? 'bg-emerald-100 text-emerald-700'
                     : conversation.status === 'pending'
-                      ? 'bg-yellow-100 text-yellow-700'
+                      ? 'bg-amber-100 text-amber-700'
                       : conversation.status === 'resolved'
                         ? 'bg-blue-100 text-blue-700'
-                        : 'bg-gray-100 text-gray-700'
+                        : 'bg-canvas-sunken text-night-600'
                 "
               >
                 {{ statusLabel(conversation.status) }}
@@ -949,11 +933,11 @@ onUnmounted(() => {
                 class="rounded-full px-3 py-1 text-xs font-semibold"
                 :class="
                   conversation.priority === 'urgent'
-                    ? 'bg-red-100 text-red-700'
+                    ? 'bg-rose-100 text-rose-700'
                     : conversation.priority === 'high'
                       ? 'bg-orange-100 text-orange-700'
                       : conversation.priority === 'low'
-                        ? 'bg-gray-100 text-gray-600'
+                        ? 'bg-canvas-sunken text-night-500'
                         : 'bg-blue-100 text-blue-700'
                 "
               >
@@ -962,18 +946,18 @@ onUnmounted(() => {
             </div>
 
             <div
-              class="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-gray-500"
+              class="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-night-400"
             >
               <span>
                 Canal :
-                <strong class="text-gray-700">
+                <strong class="text-night-600">
                   {{ conversation.channel }}
                 </strong>
               </span>
 
               <span v-if="conversation.last_message_at">
                 Dernier message :
-                <strong class="text-gray-700">
+                <strong class="text-night-600">
                   {{ conversation.last_message_at }}
                 </strong>
               </span>
@@ -982,7 +966,7 @@ onUnmounted(() => {
                 IA :
                 <strong
                   :class="
-                    conversation.ai_enabled ? 'text-green-600' : 'text-gray-500'
+                    conversation.ai_enabled ? 'text-emerald-600' : 'text-night-400'
                   "
                 >
                   {{ conversation.ai_enabled ? "Activée" : "Désactivée" }}
@@ -992,22 +976,22 @@ onUnmounted(() => {
           </div>
 
           <!-- Client -->
-          <div class="rounded-lg bg-gray-50 px-4 py-3 lg:min-w-[280px]">
+          <div class="rounded-lg bg-canvas-sunken px-4 py-3 lg:min-w-[280px]">
             <p
-              class="text-xs font-semibold uppercase tracking-wide text-gray-400"
+              class="text-xs font-semibold uppercase tracking-wide text-night-300"
             >
               Client
             </p>
 
-            <p class="mt-1 font-semibold text-gray-900">
+            <p class="mt-1 font-semibold text-night-900">
               {{ conversation.client?.name || "Client inconnu" }}
             </p>
 
-            <p v-if="conversation.client?.email" class="text-sm text-gray-500">
+            <p v-if="conversation.client?.email" class="text-sm text-night-400">
               {{ conversation.client.email }}
             </p>
 
-            <p v-if="conversation.client?.phone" class="text-sm text-gray-500">
+            <p v-if="conversation.client?.phone" class="text-sm text-night-400">
               {{ conversation.client.phone }}
             </p>
           </div>
@@ -1041,15 +1025,15 @@ onUnmounted(() => {
         <!-- Conversation -->
         <section class="lg:col-span-2">
           <div
-            class="flex min-h-[650px] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
+            class="flex min-h-[650px] flex-col overflow-hidden rounded-xl border border-line bg-white shadow-sm"
           >
             <!-- Header -->
-            <div class="border-b border-gray-200 px-5 py-4">
+            <div class="border-b border-line px-5 py-4">
               <div class="flex items-center justify-between">
                 <div>
-                  <h3 class="font-semibold text-gray-900">Messages</h3>
+                  <h3 class="font-semibold text-night-900">Messages</h3>
 
-                  <p class="text-sm text-gray-500">
+                  <p class="text-sm text-night-400">
                     {{ messages.length }}
                     message{{ messages.length > 1 ? "s" : "" }}
                   </p>
@@ -1057,10 +1041,10 @@ onUnmounted(() => {
 
                 <span
                   v-if="aiProcessing"
-                  class="flex items-center gap-2 rounded-full bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700"
+                  class="flex items-center gap-2 rounded-full bg-brand-100 px-3 py-1 text-xs font-medium text-brand-700"
                 >
                   <span
-                    class="h-2 w-2 animate-pulse rounded-full bg-indigo-600"
+                    class="h-2 w-2 animate-pulse rounded-full bg-brand-500"
                   ></span>
 
                   IA en cours...
@@ -1069,12 +1053,12 @@ onUnmounted(() => {
             </div>
 
             <!-- Messages -->
-            <div class="flex-1 space-y-4 overflow-y-auto bg-gray-50 p-5">
+            <div class="flex-1 space-y-4 overflow-y-auto bg-canvas-sunken p-5">
               <div
                 v-if="messages.length === 0"
                 class="flex min-h-[400px] items-center justify-center"
               >
-                <div class="text-center text-gray-500">
+                <div class="text-center text-night-400">
                   <div class="mb-2 text-4xl">💬</div>
 
                   <p>Aucun message dans cette conversation.</p>
@@ -1090,7 +1074,7 @@ onUnmounted(() => {
                 <div class="max-w-[85%] sm:max-w-[75%]">
                   <!-- Expéditeur -->
                   <div
-                    class="mb-1 flex items-center gap-2 text-xs text-gray-500"
+                    class="mb-1 flex items-center gap-2 text-xs text-night-400"
                     :class="
                       item.sender_type === 'client'
                         ? 'justify-start'
@@ -1119,7 +1103,7 @@ onUnmounted(() => {
                   <!-- IA -->
                   <div
                     v-if="item.sender_type === 'ai'"
-                    class="mt-1 text-right text-xs text-gray-400"
+                    class="mt-1 text-right text-xs text-night-300"
                   >
                     ✓ Réponse générée par Claude
                   </div>
@@ -1127,7 +1111,7 @@ onUnmounted(() => {
                   <!-- Agent -->
                   <div
                     v-if="item.sender_type === 'agent'"
-                    class="mt-1 text-right text-xs text-gray-400"
+                    class="mt-1 text-right text-xs text-night-300"
                   >
                     Réponse agent
                   </div>
@@ -1136,21 +1120,21 @@ onUnmounted(() => {
             </div>
 
             <!-- Réponse -->
-            <div class="border-t border-gray-200 bg-white p-5">
+            <div class="border-t border-line bg-white p-5">
               <div v-if="canModify" class="space-y-3">
                 <textarea
                   v-model="messageForm.message"
                   rows="4"
                   :disabled="sending || messageForm.processing || testingAi"
                   placeholder="Écrire une réponse au client..."
-                  class="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm shadow-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 disabled:bg-gray-100"
+                  class="w-full rounded-xl border border-line-strong px-4 py-3 text-sm shadow-sm outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-200 disabled:bg-canvas-sunken"
                   @keydown.ctrl.enter="sendMessage"
                 ></textarea>
 
                 <div
                   class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <p class="text-xs text-gray-400">
+                  <p class="text-xs text-night-300">
                     Ctrl + Entrée pour envoyer
                   </p>
 
@@ -1165,7 +1149,7 @@ onUnmounted(() => {
                         !canModify ||
                         !conversation.ai_enabled
                       "
-                      class="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      class="rounded-lg border border-brand-200 bg-brand-50 px-4 py-2 text-sm font-medium text-brand-700 transition hover:bg-brand-100 disabled:cursor-not-allowed disabled:opacity-50"
                       @click="testAi"
                     >
                       {{
@@ -1184,7 +1168,7 @@ onUnmounted(() => {
                         testingAi ||
                         !messageForm.message.trim()
                       "
-                      class="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      class="rounded-lg bg-brand-500 px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
                       @click="sendMessage"
                     >
                       {{
@@ -1199,13 +1183,13 @@ onUnmounted(() => {
 
               <div
                 v-else
-                class="rounded-xl border border-gray-200 bg-gray-50 p-4 text-center"
+                class="rounded-xl border border-line bg-canvas-sunken p-4 text-center"
               >
-                <p class="text-sm font-medium text-gray-700">
+                <p class="text-sm font-medium text-night-600">
                   Vous ne pouvez pas répondre à cette conversation.
                 </p>
 
-                <p class="mt-1 text-xs text-gray-500">
+                <p class="mt-1 text-xs text-night-400">
                   Elle doit vous être attribuée par le responsable.
                 </p>
               </div>
@@ -1216,17 +1200,17 @@ onUnmounted(() => {
         <!-- Panneau -->
         <aside class="space-y-6">
           <!-- Attribution -->
-          <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h3 class="font-semibold text-gray-900">Attribution</h3>
+          <div class="rounded-xl border border-line bg-white p-5 shadow-sm">
+            <h3 class="font-semibold text-night-900">Attribution</h3>
 
-            <p class="mt-1 text-sm text-gray-500">
+            <p class="mt-1 text-sm text-night-400">
               Agent responsable de cette conversation.
             </p>
 
             <div class="mt-4">
               <label
                 for="assigned_to"
-                class="mb-2 block text-sm font-medium text-gray-700"
+                class="mb-2 block text-sm font-medium text-night-600"
               >
                 Agent
               </label>
@@ -1235,7 +1219,7 @@ onUnmounted(() => {
                 id="assigned_to"
                 :value="conversation.assigned_to ?? ''"
                 :disabled="!isOwner || updatingConversation"
-                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:bg-gray-100"
+                class="w-full rounded-lg border border-line-strong px-3 py-2 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-200 disabled:cursor-not-allowed disabled:bg-canvas-sunken"
                 @change="changeAssignedAgent"
               >
                 <option value="">Non attribuée</option>
@@ -1250,21 +1234,21 @@ onUnmounted(() => {
                 </option>
               </select>
 
-              <p v-if="!isOwner" class="mt-2 text-xs text-gray-500">
+              <p v-if="!isOwner" class="mt-2 text-xs text-night-400">
                 Seul le responsable peut modifier l'attribution.
               </p>
             </div>
 
-            <div class="mt-4 rounded-lg bg-gray-50 p-3">
-              <p class="text-xs text-gray-500">Agent actuellement affecté</p>
+            <div class="mt-4 rounded-lg bg-canvas-sunken p-3">
+              <p class="text-xs text-night-400">Agent actuellement affecté</p>
 
-              <p class="mt-1 text-sm font-semibold text-gray-800">
+              <p class="mt-1 text-sm font-semibold text-night-800">
                 {{ assignedAgentName }}
               </p>
 
               <p
                 v-if="isAssignedToCurrentUser"
-                class="mt-1 text-xs font-medium text-green-600"
+                class="mt-1 text-xs font-medium text-emerald-600"
               >
                 ✓ Cette conversation vous est attribuée
               </p>
@@ -1272,15 +1256,15 @@ onUnmounted(() => {
           </div>
 
           <!-- Gestion -->
-          <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h3 class="font-semibold text-gray-900">Gestion</h3>
+          <div class="rounded-xl border border-line bg-white p-5 shadow-sm">
+            <h3 class="font-semibold text-night-900">Gestion</h3>
 
             <div class="mt-5 space-y-5">
               <!-- Statut -->
               <div>
                 <label
                   for="status"
-                  class="mb-2 block text-sm font-medium text-gray-700"
+                  class="mb-2 block text-sm font-medium text-night-600"
                 >
                   Statut
                 </label>
@@ -1289,7 +1273,7 @@ onUnmounted(() => {
                   id="status"
                   :value="conversation.status"
                   :disabled="!canModify || updatingConversation"
-                  class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:bg-gray-100"
+                  class="w-full rounded-lg border border-line-strong px-3 py-2 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-200 disabled:cursor-not-allowed disabled:bg-canvas-sunken"
                   @change="changeStatus"
                 >
                   <option value="open">Ouverte</option>
@@ -1306,7 +1290,7 @@ onUnmounted(() => {
               <div>
                 <label
                   for="priority"
-                  class="mb-2 block text-sm font-medium text-gray-700"
+                  class="mb-2 block text-sm font-medium text-night-600"
                 >
                   Priorité
                 </label>
@@ -1315,7 +1299,7 @@ onUnmounted(() => {
                   id="priority"
                   :value="conversation.priority"
                   :disabled="!canModify || updatingConversation"
-                  class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:bg-gray-100"
+                  class="w-full rounded-lg border border-line-strong px-3 py-2 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-200 disabled:cursor-not-allowed disabled:bg-canvas-sunken"
                   @change="changePriority"
                 >
                   <option value="low">Faible</option>
@@ -1329,14 +1313,14 @@ onUnmounted(() => {
               </div>
 
               <!-- IA -->
-              <div class="rounded-lg border border-gray-200 p-4">
+              <div class="rounded-lg border border-line p-4">
                 <div class="flex items-center justify-between gap-4">
                   <div>
-                    <p class="text-sm font-semibold text-gray-800">
+                    <p class="text-sm font-semibold text-night-800">
                       Assistant IA
                     </p>
 
-                    <p class="mt-1 text-xs text-gray-500">
+                    <p class="mt-1 text-xs text-night-400">
                       Réponse automatique de Claude
                     </p>
                   </div>
@@ -1353,7 +1337,7 @@ onUnmounted(() => {
                     />
 
                     <div
-                      class="h-6 w-11 rounded-full bg-gray-300 transition peer-checked:bg-indigo-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
+                      class="h-6 w-11 rounded-full bg-night-200 transition peer-checked:bg-brand-500 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-brand-300 peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
                     ></div>
 
                     <div
@@ -1366,42 +1350,42 @@ onUnmounted(() => {
           </div>
 
           <!-- Client -->
-          <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h3 class="font-semibold text-gray-900">Informations client</h3>
+          <div class="rounded-xl border border-line bg-white p-5 shadow-sm">
+            <h3 class="font-semibold text-night-900">Informations client</h3>
 
             <div class="mt-4 space-y-4">
               <div>
                 <p
-                  class="text-xs font-medium uppercase tracking-wide text-gray-400"
+                  class="text-xs font-medium uppercase tracking-wide text-night-300"
                 >
                   Nom
                 </p>
 
-                <p class="mt-1 text-sm font-medium text-gray-800">
+                <p class="mt-1 text-sm font-medium text-night-800">
                   {{ conversation.client?.name || "Non renseigné" }}
                 </p>
               </div>
 
               <div>
                 <p
-                  class="text-xs font-medium uppercase tracking-wide text-gray-400"
+                  class="text-xs font-medium uppercase tracking-wide text-night-300"
                 >
                   Email
                 </p>
 
-                <p class="mt-1 break-all text-sm text-gray-700">
+                <p class="mt-1 break-all text-sm text-night-600">
                   {{ conversation.client?.email || "Non renseigné" }}
                 </p>
               </div>
 
               <div>
                 <p
-                  class="text-xs font-medium uppercase tracking-wide text-gray-400"
+                  class="text-xs font-medium uppercase tracking-wide text-night-300"
                 >
                   Téléphone
                 </p>
 
-                <p class="mt-1 text-sm text-gray-700">
+                <p class="mt-1 text-sm text-night-600">
                   {{ conversation.client?.phone || "Non renseigné" }}
                 </p>
               </div>
@@ -1410,5 +1394,5 @@ onUnmounted(() => {
         </aside>
       </div>
     </main>
-  </div>
+  </AuthenticatedLayout>
 </template>

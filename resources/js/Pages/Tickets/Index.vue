@@ -1,58 +1,31 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-import { Head, Link, router, usePage } from "@inertiajs/vue3";
-import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { Head, Link, router } from "@inertiajs/vue3";
 
-const page = usePage();
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import PageHeader from "@/Components/UI/PageHeader.vue";
+import SurfaceCard from "@/Components/UI/SurfaceCard.vue";
+import FlashMessages from "@/Components/UI/FlashMessages.vue";
+import EmptyState from "@/Components/UI/EmptyState.vue";
+import StateBadge from "@/Components/UI/StateBadge.vue";
 
 const props = defineProps({
-    tickets: {
-        type: Object,
-        required: true,
-    },
-
-    statistics: {
-        type: Object,
-        default: () => ({
-            total: 0,
-            open: 0,
-            pending: 0,
-            in_progress: 0,
-            resolved: 0,
-            closed: 0,
-            urgent: 0,
-            unassigned: 0,
-            today: 0,
-        }),
-    },
-
-    agents: {
-        type: Array,
-        default: () => [],
-    },
-
-    clients: {
-        type: Array,
-        default: () => [],
-    },
-
-    filters: {
-        type: Object,
-        default: () => ({
-            search: "",
-            status: "",
-            priority: "",
-            category: "",
-            assigned_to: "",
-            channel: "",
-        }),
-    },
+    tickets: { type: Object, required: true },
+    statistics: { type: Object, default: () => ({}) },
+    agents: { type: Array, default: () => [] },
+    clients: { type: Array, default: () => [] },
+    filters: { type: Object, default: () => ({}) },
+    categories: { type: Array, default: () => [] },
 });
 
 /*
 |--------------------------------------------------------------------------
 | Filtres
 |--------------------------------------------------------------------------
+|
+| La recherche est temporisée : sans cela, chaque frappe déclenchait une
+| requête. Les listes déroulantes, elles, s'appliquent immédiatement.
+|
 */
 
 const search = ref(props.filters.search ?? "");
@@ -61,78 +34,6 @@ const priority = ref(props.filters.priority ?? "");
 const category = ref(props.filters.category ?? "");
 const assignedTo = ref(props.filters.assigned_to ?? "");
 const channel = ref(props.filters.channel ?? "");
-
-/*
-|--------------------------------------------------------------------------
-| État
-|--------------------------------------------------------------------------
-*/
-
-const refreshing = ref(false);
-let refreshInterval = null;
-
-/*
-|--------------------------------------------------------------------------
-| Messages flash
-|--------------------------------------------------------------------------
-*/
-
-const successMessage = computed(() => {
-    return page.props.flash?.success ?? null;
-});
-
-const errorMessage = computed(() => {
-    return page.props.flash?.error ?? null;
-});
-
-/*
-|--------------------------------------------------------------------------
-| Statistiques
-|--------------------------------------------------------------------------
-*/
-
-const totalTickets = computed(() => {
-    return (
-        props.statistics?.total ??
-        props.tickets?.total ??
-        props.tickets?.data?.length ??
-        0
-    );
-});
-
-const openTickets = computed(() => {
-    return props.statistics?.open ?? 0;
-});
-
-const pendingTickets = computed(() => {
-    return props.statistics?.pending ?? 0;
-});
-
-const inProgressTickets = computed(() => {
-    return props.statistics?.in_progress ?? 0;
-});
-
-const resolvedTickets = computed(() => {
-    return props.statistics?.resolved ?? 0;
-});
-
-const urgentTickets = computed(() => {
-    return props.statistics?.urgent ?? 0;
-});
-
-const unassignedTickets = computed(() => {
-    return props.statistics?.unassigned ?? 0;
-});
-
-const todayTickets = computed(() => {
-    return props.statistics?.today ?? 0;
-});
-
-/*
-|--------------------------------------------------------------------------
-| Appliquer les filtres
-|--------------------------------------------------------------------------
-*/
 
 const applyFilters = () => {
     router.get(
@@ -145,19 +46,18 @@ const applyFilters = () => {
             assigned_to: assignedTo.value || undefined,
             channel: channel.value || undefined,
         },
-        {
-            preserveState: true,
-            preserveScroll: true,
-            replace: true,
-        }
+        { preserveState: true, preserveScroll: true, replace: true },
     );
 };
 
-/*
-|--------------------------------------------------------------------------
-| Réinitialiser les filtres
-|--------------------------------------------------------------------------
-*/
+let searchTimer = null;
+
+watch(search, () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(applyFilters, 350);
+});
+
+watch([status, priority, category, assignedTo, channel], applyFilters);
 
 const resetFilters = () => {
     search.value = "";
@@ -166,26 +66,37 @@ const resetFilters = () => {
     category.value = "";
     assignedTo.value = "";
     channel.value = "";
-
-    router.get(
-        route("tickets.index"),
-        {},
-        {
-            preserveState: false,
-            preserveScroll: true,
-            replace: true,
-        }
-    );
 };
+
+const activeFilters = computed(
+    () =>
+        [
+            search.value,
+            status.value,
+            priority.value,
+            category.value,
+            assignedTo.value,
+            channel.value,
+        ].filter(Boolean).length,
+);
 
 /*
 |--------------------------------------------------------------------------
 | Actualisation automatique
 |--------------------------------------------------------------------------
+|
+| Suspendue quand l'onglet passe en arrière-plan : interroger le serveur
+| toutes les dix secondes pour un écran que personne ne regarde est une
+| dépense pure.
+|
 */
 
+const refreshing = ref(false);
+
+let refreshInterval = null;
+
 const refreshTickets = () => {
-    if (refreshing.value) {
+    if (refreshing.value || document.hidden) {
         return;
     }
 
@@ -202,1264 +113,470 @@ const refreshTickets = () => {
 };
 
 onMounted(() => {
-    refreshInterval = setInterval(() => {
-        refreshTickets();
-    }, 5000);
+    refreshInterval = setInterval(refreshTickets, 10000);
 });
 
 onBeforeUnmount(() => {
-    if (refreshInterval) {
-        clearInterval(refreshInterval);
-        refreshInterval = null;
-    }
+    clearInterval(refreshInterval);
+    clearTimeout(searchTimer);
 });
 
 /*
 |--------------------------------------------------------------------------
-| Statuts
+| Statistiques
 |--------------------------------------------------------------------------
+|
+| Cliquables : chaque tuile est un filtre. C'est le raccourci le plus
+| utilisé au quotidien.
+|
 */
 
-const statusLabel = (value) => {
-    const labels = {
-        open: "Ouvert",
-        pending: "En attente",
-        in_progress: "En cours",
-        resolved: "Résolu",
-        closed: "Fermé",
-    };
+const stat = (key) => Number(props.statistics?.[key] ?? 0);
 
-    return labels[value] ?? value ?? "—";
-};
+const tiles = computed(() => [
+    { key: "open", label: "Ouverts", value: stat("open"), filter: { status: "open" }, tone: "text-sky-600" },
+    { key: "in_progress", label: "En cours", value: stat("in_progress"), filter: { status: "in_progress" }, tone: "text-brand-600" },
+    { key: "urgent", label: "Urgents", value: stat("urgent"), filter: { priority: "urgent" }, tone: "text-rose-600" },
+    { key: "unassigned", label: "Sans agent", value: stat("unassigned"), filter: {}, tone: "text-amber-600" },
+    { key: "resolved", label: "Résolus", value: stat("resolved"), filter: { status: "resolved" }, tone: "text-emerald-600" },
+    { key: "today", label: "Aujourd'hui", value: stat("today"), filter: {}, tone: "text-night-700" },
+]);
 
-const statusClass = (value) => {
-    const classes = {
-        open: "bg-blue-100 text-blue-700",
-        pending: "bg-amber-100 text-amber-700",
-        in_progress: "bg-indigo-100 text-indigo-700",
-        resolved: "bg-emerald-100 text-emerald-700",
-        closed: "bg-gray-100 text-gray-600",
-    };
+const applyTile = (tile) => {
+    if (!Object.keys(tile.filter).length) {
+        return;
+    }
 
-    return classes[value] ?? "bg-gray-100 text-gray-600";
+    resetFilters();
+
+    if (tile.filter.status) {
+        status.value = tile.filter.status;
+    }
+
+    if (tile.filter.priority) {
+        priority.value = tile.filter.priority;
+    }
 };
 
 /*
 |--------------------------------------------------------------------------
-| Priorités
+| Présentation
 |--------------------------------------------------------------------------
+|
+| Les libellés d'état viennent de lib/tokens.js, pas de tables recopiées
+| ici : une couleur de statut doit dire la même chose sur toutes les pages.
+|
 */
 
-const priorityLabel = (value) => {
-    const labels = {
-        low: "Faible",
-        normal: "Normale",
-        high: "Élevée",
-        urgent: "Urgente",
-    };
-
-    return labels[value] ?? value ?? "—";
+const categoryLabels = {
+    facturation: "Facturation",
+    livraison: "Livraison",
+    technique: "Technique",
+    reclamation: "Réclamation",
+    remboursement: "Remboursement",
+    commande: "Commande",
+    compte: "Compte",
+    general: "Général",
 };
 
-const priorityClass = (value) => {
-    const classes = {
-        low: "bg-gray-100 text-gray-600",
-        normal: "bg-blue-100 text-blue-700",
-        high: "bg-orange-100 text-orange-700",
-        urgent: "bg-red-100 text-red-700",
-    };
+const categoryLabel = (value) => categoryLabels[value] ?? value ?? "—";
 
-    return classes[value] ?? "bg-gray-100 text-gray-600";
-};
-
-/*
-|--------------------------------------------------------------------------
-| Catégories
-|--------------------------------------------------------------------------
-*/
-
-const categoryLabel = (value) => {
-    const labels = {
-        general: "Générale",
-        technical: "Technique",
-        billing: "Facturation",
-        complaint: "Réclamation",
-        request: "Demande",
-        network: "Réseau",
-        account: "Compte",
-        other: "Autre",
-    };
-
-    return labels[value] ?? value ?? "—";
-};
-
-/*
-|--------------------------------------------------------------------------
-| Canaux
-|--------------------------------------------------------------------------
-*/
-
-const channelLabel = (value) => {
-    const labels = {
-        web: "Web",
-        widget: "Widget",
-        whatsapp: "WhatsApp",
-        email: "Email",
-        phone: "Téléphone",
-    };
-
-    return labels[value] ?? value ?? "—";
-};
-
-const channelClass = (value) => {
-    const classes = {
-        web: "bg-indigo-100 text-indigo-700",
-        widget: "bg-cyan-100 text-cyan-700",
-        whatsapp: "bg-green-100 text-green-700",
-        email: "bg-purple-100 text-purple-700",
-        phone: "bg-orange-100 text-orange-700",
-    };
-
-    return classes[value] ?? "bg-gray-100 text-gray-600";
-};
-
-/*
-|--------------------------------------------------------------------------
-| Client
-|--------------------------------------------------------------------------
-*/
-
-const getClientName = (ticket) => {
-    const client = ticket?.client;
+const clientName = (ticket) => {
+    const client = ticket.client;
 
     if (!client) {
         return "Client inconnu";
     }
 
-    if (client.full_name) {
-        return client.full_name;
-    }
+    const name = `${client.first_name ?? ""} ${client.last_name ?? ""}`.trim();
 
-    const fullName = `${client.first_name ?? ""} ${
-        client.last_name ?? ""
-    }`.trim();
-
-    return fullName || "Client inconnu";
+    return name || client.email || client.phone || "Client inconnu";
 };
 
-const getClientContact = (ticket) => {
-    const client = ticket?.client;
+const agentName = (ticket) =>
+    ticket.assigned_agent?.name ?? ticket.assignedAgent?.name ?? null;
 
-    if (!client) {
+const formatDate = (value) => {
+    if (!value) {
         return "—";
     }
 
-    return client.phone ?? client.email ?? "—";
-};
+    const date = new Date(value);
 
-/*
-|--------------------------------------------------------------------------
-| Agent
-|--------------------------------------------------------------------------
-*/
-
-const getAgentName = (ticket) => {
-    const agent =
-        ticket?.assigned_agent ??
-        ticket?.assignedAgent ??
-        null;
-
-    if (!agent) {
-        return "Non attribué";
-    }
-
-    if (agent.name) {
-        return agent.name;
-    }
-
-    const fullName = `${agent.first_name ?? ""} ${
-        agent.last_name ?? ""
-    }`.trim();
-
-    return fullName || agent.email || "Agent";
-};
-
-const agentClass = (ticket) => {
-    const agent =
-        ticket?.assigned_agent ??
-        ticket?.assignedAgent ??
-        null;
-
-    if (agent) {
-        return "bg-emerald-100 text-emerald-700";
-    }
-
-    return "bg-gray-100 text-gray-500";
-};
-
-/*
-|--------------------------------------------------------------------------
-| Dates
-|--------------------------------------------------------------------------
-*/
-
-const formatDate = (date) => {
-    if (!date) {
+    if (Number.isNaN(date.getTime())) {
         return "—";
     }
 
-    const parsedDate = new Date(date);
-
-    if (Number.isNaN(parsedDate.getTime())) {
-        return "—";
-    }
-
-    return parsedDate.toLocaleString("fr-FR", {
+    return date.toLocaleString("fr-FR", {
         day: "2-digit",
         month: "2-digit",
-        year: "numeric",
         hour: "2-digit",
         minute: "2-digit",
     });
 };
 
 /*
-|--------------------------------------------------------------------------
-| SLA
-|--------------------------------------------------------------------------
-*/
-
-const slaLabel = (ticket) => {
-    if (!ticket?.sla_due_at) {
-        return "Non défini";
-    }
-
-    return formatDate(ticket.sla_due_at);
-};
-
-const slaClass = (ticket) => {
+ * État du SLA : dépassé, proche, ou sans objet une fois le ticket clos.
+ */
+const slaState = (ticket) => {
     if (
-        !ticket?.sla_due_at ||
-        ticket.status === "resolved" ||
-        ticket.status === "closed"
+        !ticket.sla_due_at ||
+        ["resolved", "closed"].includes(ticket.status)
     ) {
-        return "bg-gray-100 text-gray-600";
+        return { tone: "text-night-400", label: "—" };
     }
 
-    const dueDate = new Date(ticket.sla_due_at);
+    const due = new Date(ticket.sla_due_at);
 
-    if (Number.isNaN(dueDate.getTime())) {
-        return "bg-gray-100 text-gray-600";
+    if (Number.isNaN(due.getTime())) {
+        return { tone: "text-night-400", label: "—" };
     }
 
-    if (dueDate.getTime() < Date.now()) {
-        return "bg-red-100 text-red-700";
+    const minutes = (due.getTime() - Date.now()) / 60000;
+
+    if (minutes < 0) {
+        return { tone: "text-rose-600 font-semibold", label: "Dépassé" };
     }
 
-    return "bg-amber-100 text-amber-700";
+    if (minutes < 60) {
+        return {
+            tone: "text-amber-600 font-semibold",
+            label: `${Math.round(minutes)} min`,
+        };
+    }
+
+    return { tone: "text-night-500", label: formatDate(ticket.sla_due_at) };
 };
 
-/*
-|--------------------------------------------------------------------------
-| Numéro du ticket
-|--------------------------------------------------------------------------
-*/
-
-const ticketNumber = (ticket) => {
-    return ticket?.ticket_number ?? `#${ticket?.id ?? ""}`;
-};
-
-/*
-|--------------------------------------------------------------------------
-| Pagination
-|--------------------------------------------------------------------------
-*/
-
-const paginationLinks = computed(() => {
-    return props.tickets?.links ?? [];
-});
-const getAgentDisplayName = (agent) => {
-    if (!agent) {
-        return "Agent";
-    }
-
-    if (agent.name) {
-        return agent.name;
-    }
-
-    const fullName = `${agent.first_name ?? ""} ${
-        agent.last_name ?? ""
-    }`.trim();
-
-    if (fullName) {
-        return fullName;
-    }
-
-    return agent.email ?? "Agent";
-};
+const hasTickets = computed(() => props.tickets.data.length > 0);
 </script>
 
 <template>
     <Head title="Tickets" />
 
     <AuthenticatedLayout>
-        <template #header>
-            <div
-                class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+        <div class="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+            <PageHeader
+                title="Tickets"
+                description="Les demandes qui nécessitent un suivi."
             >
-                <div>
-                    <h2 class="text-xl font-semibold text-gray-800">
-                        Tickets / Réclamations
-                    </h2>
+                <template #actions>
+                    <span
+                        v-if="refreshing"
+                        class="self-center text-xs text-night-400"
+                    >
+                        actualisation…
+                    </span>
 
-                    <p class="mt-1 text-sm text-gray-500">
-                        Gérez les demandes, incidents et réclamations de vos
-                        clients.
+                    <Link
+                        :href="route('tickets.create')"
+                        class="rounded-xl bg-brand-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-600"
+                    >
+                        Nouveau ticket
+                    </Link>
+                </template>
+            </PageHeader>
+
+            <FlashMessages />
+
+            <!-- Statistiques -->
+
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                <button
+                    v-for="tile in tiles"
+                    :key="tile.key"
+                    type="button"
+                    class="rounded-xl border border-line bg-white px-4 py-3 text-left transition hover:border-line-strong hover:bg-canvas-sunken"
+                    @click="applyTile(tile)"
+                >
+                    <p class="text-xs text-night-400">{{ tile.label }}</p>
+                    <p
+                        class="mt-1 text-2xl font-semibold tabular-nums"
+                        :class="tile.tone"
+                    >
+                        {{ tile.value }}
                     </p>
-                </div>
-
-                <Link
-                    :href="route('tickets.create')"
-                    class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
-                >
-                    + Nouveau ticket
-                </Link>
+                </button>
             </div>
-        </template>
 
-        <div class="py-8">
-            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <!-- FLASH SUCCESS -->
-                <div
-                    v-if="successMessage"
-                    class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-medium text-emerald-700"
-                >
-                    {{ successMessage }}
-                </div>
+            <!-- Filtres -->
 
-                <!-- FLASH ERROR -->
-                <div
-                    v-if="errorMessage"
-                    class="mb-6 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-medium text-red-700"
-                >
-                    {{ errorMessage }}
-                </div>
-
-                <!-- STATISTIQUES -->
-                <div
-                    class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8"
-                >
-                    <div
-                        class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100"
-                    >
-                        <p class="text-xs font-medium text-gray-500">
-                            Total
-                        </p>
-
-                        <p class="mt-2 text-2xl font-bold text-gray-900">
-                            {{ totalTickets }}
-                        </p>
-                    </div>
-
-                    <div
-                        class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100"
-                    >
-                        <p class="text-xs font-medium text-blue-600">
-                            Ouverts
-                        </p>
-
-                        <p class="mt-2 text-2xl font-bold text-blue-700">
-                            {{ openTickets }}
-                        </p>
-                    </div>
-
-                    <div
-                        class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100"
-                    >
-                        <p class="text-xs font-medium text-amber-600">
-                            En attente
-                        </p>
-
-                        <p class="mt-2 text-2xl font-bold text-amber-700">
-                            {{ pendingTickets }}
-                        </p>
-                    </div>
-
-                    <div
-                        class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100"
-                    >
-                        <p class="text-xs font-medium text-indigo-600">
-                            En cours
-                        </p>
-
-                        <p class="mt-2 text-2xl font-bold text-indigo-700">
-                            {{ inProgressTickets }}
-                        </p>
-                    </div>
-
-                    <div
-                        class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100"
-                    >
-                        <p class="text-xs font-medium text-emerald-600">
-                            Résolus
-                        </p>
-
-                        <p class="mt-2 text-2xl font-bold text-emerald-700">
-                            {{ resolvedTickets }}
-                        </p>
-                    </div>
-
-                    <div
-                        class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100"
-                    >
-                        <p class="text-xs font-medium text-red-600">
-                            Urgents
-                        </p>
-
-                        <p class="mt-2 text-2xl font-bold text-red-700">
-                            {{ urgentTickets }}
-                        </p>
-                    </div>
-
-                    <div
-                        class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100"
-                    >
-                        <p class="text-xs font-medium text-orange-600">
-                            Non attribués
-                        </p>
-
-                        <p class="mt-2 text-2xl font-bold text-orange-700">
-                            {{ unassignedTickets }}
-                        </p>
-                    </div>
-
-                    <div
-                        class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100"
-                    >
-                        <p class="text-xs font-medium text-violet-600">
-                            Aujourd'hui
-                        </p>
-
-                        <p class="mt-2 text-2xl font-bold text-violet-700">
-                            {{ todayTickets }}
-                        </p>
-                    </div>
-                </div>
-
-                <!-- FILTRES -->
-                <div
-                    class="mb-6 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100"
-                >
-                    <div class="mb-5">
-                        <h2 class="text-base font-semibold text-gray-900">
-                            Rechercher et filtrer
-                        </h2>
-
-                        <p class="mt-1 text-sm text-gray-500">
-                            Retrouvez rapidement un ticket ou une réclamation.
-                        </p>
-                    </div>
-
-                    <div
-                        class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
-                    >
-                        <!-- RECHERCHE -->
-                        <div>
-                            <label
-                                for="ticket-search"
-                                class="mb-1 block text-sm font-medium text-gray-700"
-                            >
-                                Recherche
-                            </label>
-
-                            <input
-                                id="ticket-search"
-                                v-model="search"
-                                type="text"
-                                placeholder="N° ticket, sujet, client..."
-                                class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                @keyup.enter="applyFilters"
-                            />
-                        </div>
-
-                        <!-- STATUT -->
-                        <div>
-                            <label
-                                for="ticket-status"
-                                class="mb-1 block text-sm font-medium text-gray-700"
-                            >
-                                Statut
-                            </label>
-
-                            <select
-                                id="ticket-status"
-                                v-model="status"
-                                class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                            >
-                                <option value="">
-                                    Tous les statuts
-                                </option>
-
-                                <option value="open">
-                                    Ouvert
-                                </option>
-
-                                <option value="pending">
-                                    En attente
-                                </option>
-
-                                <option value="in_progress">
-                                    En cours
-                                </option>
-
-                                <option value="resolved">
-                                    Résolu
-                                </option>
-
-                                <option value="closed">
-                                    Fermé
-                                </option>
-                            </select>
-                        </div>
-
-                        <!-- PRIORITE -->
-                        <div>
-                            <label
-                                for="ticket-priority"
-                                class="mb-1 block text-sm font-medium text-gray-700"
-                            >
-                                Priorité
-                            </label>
-
-                            <select
-                                id="ticket-priority"
-                                v-model="priority"
-                                class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                            >
-                                <option value="">
-                                    Toutes
-                                </option>
-
-                                <option value="low">
-                                    Faible
-                                </option>
-
-                                <option value="normal">
-                                    Normale
-                                </option>
-
-                                <option value="high">
-                                    Élevée
-                                </option>
-
-                                <option value="urgent">
-                                    Urgente
-                                </option>
-                            </select>
-                        </div>
-
-                        <!-- CATEGORIE -->
-                        <div>
-                            <label
-                                for="ticket-category"
-                                class="mb-1 block text-sm font-medium text-gray-700"
-                            >
-                                Catégorie
-                            </label>
-
-                            <select
-                                id="ticket-category"
-                                v-model="category"
-                                class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                            >
-                                <option value="">
-                                    Toutes
-                                </option>
-
-                                <option value="general">
-                                    Générale
-                                </option>
-
-                                <option value="technical">
-                                    Technique
-                                </option>
-
-                                <option value="billing">
-                                    Facturation
-                                </option>
-
-                                <option value="complaint">
-                                    Réclamation
-                                </option>
-
-                                <option value="request">
-                                    Demande
-                                </option>
-
-                                <option value="network">
-                                    Réseau
-                                </option>
-
-                                <option value="account">
-                                    Compte
-                                </option>
-
-                                <option value="other">
-                                    Autre
-                                </option>
-                            </select>
-                        </div>
-
-                        <!-- AGENT -->
-                        <div>
-                            <label
-                                for="ticket-agent"
-                                class="mb-1 block text-sm font-medium text-gray-700"
-                            >
-                                Agent
-                            </label>
-
-                            <select
-                                id="ticket-agent"
-                                v-model="assignedTo"
-                                class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                            >
-                                <option value="">
-                                    Tous les agents
-                                </option>
-
-                                <option
-                                    v-for="agent in agents"
-                                    :key="agent.id"
-                                    :value="agent.id"
-                                >
-                                   {{ getAgentDisplayName(agent) }}
-                                </option>
-                            </select>
-                        </div>
-
-                        <!-- CANAL -->
-                        <div>
-                            <label
-                                for="ticket-channel"
-                                class="mb-1 block text-sm font-medium text-gray-700"
-                            >
-                                Canal
-                            </label>
-
-                            <select
-                                id="ticket-channel"
-                                v-model="channel"
-                                class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                            >
-                                <option value="">
-                                    Tous les canaux
-                                </option>
-
-                                <option value="web">
-                                    Web
-                                </option>
-
-                                <option value="widget">
-                                    Widget
-                                </option>
-
-                                <option value="whatsapp">
-                                    WhatsApp
-                                </option>
-
-                                <option value="email">
-                                    Email
-                                </option>
-
-                                <option value="phone">
-                                    Téléphone
-                                </option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="mt-5 flex flex-wrap gap-3">
-                        <button
-                            type="button"
-                            class="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
-                            @click="applyFilters"
-                        >
+            <SurfaceCard>
+                <div class="flex flex-wrap items-end gap-3">
+                    <div class="min-w-[220px] flex-1">
+                        <label class="block text-xs font-medium text-night-500">
                             Rechercher
-                        </button>
-
-                        <button
-                            type="button"
-                            class="rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
-                            @click="resetFilters"
-                        >
-                            Réinitialiser
-                        </button>
+                        </label>
+                        <input
+                            v-model="search"
+                            type="search"
+                            placeholder="Numéro, sujet, client…"
+                            class="mt-1 w-full rounded-xl border-line text-sm focus:border-brand-400 focus:ring-brand-400"
+                        />
                     </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-night-500">
+                            Statut
+                        </label>
+                        <select
+                            v-model="status"
+                            class="mt-1 rounded-xl border-line text-sm focus:border-brand-400 focus:ring-brand-400"
+                        >
+                            <option value="">Tous</option>
+                            <option value="open">Ouvert</option>
+                            <option value="pending">En attente</option>
+                            <option value="in_progress">En cours</option>
+                            <option value="resolved">Résolu</option>
+                            <option value="closed">Fermé</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-night-500">
+                            Priorité
+                        </label>
+                        <select
+                            v-model="priority"
+                            class="mt-1 rounded-xl border-line text-sm focus:border-brand-400 focus:ring-brand-400"
+                        >
+                            <option value="">Toutes</option>
+                            <option value="urgent">Urgente</option>
+                            <option value="high">Élevée</option>
+                            <option value="normal">Normale</option>
+                            <option value="low">Faible</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-night-500">
+                            Catégorie
+                        </label>
+                        <select
+                            v-model="category"
+                            class="mt-1 rounded-xl border-line text-sm focus:border-brand-400 focus:ring-brand-400"
+                        >
+                            <option value="">Toutes</option>
+                            <option
+                                v-for="item in categories"
+                                :key="item"
+                                :value="item"
+                            >
+                                {{ categoryLabel(item) }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-night-500">
+                            Agent
+                        </label>
+                        <select
+                            v-model="assignedTo"
+                            class="mt-1 rounded-xl border-line text-sm focus:border-brand-400 focus:ring-brand-400"
+                        >
+                            <option value="">Tous</option>
+                            <option
+                                v-for="agent in agents"
+                                :key="agent.id"
+                                :value="agent.id"
+                            >
+                                {{ agent.name }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <button
+                        v-if="activeFilters"
+                        type="button"
+                        class="rounded-xl border border-line px-4 py-2 text-sm font-medium text-night-600 transition hover:bg-canvas-sunken"
+                        @click="resetFilters"
+                    >
+                        Effacer ({{ activeFilters }})
+                    </button>
                 </div>
+            </SurfaceCard>
 
-                <!-- LISTE -->
-                <div
-                    class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100"
-                >
-                    <div
-                        class="flex flex-col gap-3 border-b border-gray-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between"
-                    >
-                        <div>
-                            <h2 class="text-lg font-bold text-gray-900">
-                                Liste des tickets
-                            </h2>
+            <!-- Liste -->
 
-                            <p class="mt-1 text-sm text-gray-500">
-                                Suivez chaque demande jusqu'à sa résolution.
-                            </p>
-                        </div>
+            <SurfaceCard flush>
+                <div v-if="hasTickets">
+                    <!-- Écran large -->
 
-                        <div class="flex items-center gap-3">
-                            <span
-                                v-if="refreshing"
-                                class="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700"
+                    <table class="hidden w-full lg:table">
+                        <thead>
+                            <tr
+                                class="border-b border-line text-left text-xs font-medium text-night-400"
                             >
-                                <span
-                                    class="h-2 w-2 animate-pulse rounded-full bg-indigo-500"
-                                ></span>
+                                <th class="px-6 py-3">Ticket</th>
+                                <th class="px-3 py-3">Client</th>
+                                <th class="px-3 py-3">Catégorie</th>
+                                <th class="px-3 py-3">Priorité</th>
+                                <th class="px-3 py-3">Statut</th>
+                                <th class="px-3 py-3">Agent</th>
+                                <th class="px-3 py-3">SLA</th>
+                            </tr>
+                        </thead>
 
-                                Actualisation...
-                            </span>
-
-                            <span
-                                v-else
-                                class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700"
-                            >
-                                <span
-                                    class="h-2 w-2 rounded-full bg-emerald-500"
-                                ></span>
-
-                                Temps réel
-                            </span>
-
-                            <span
-                                class="rounded-full bg-indigo-100 px-3 py-1 text-sm font-semibold text-indigo-700"
-                            >
-                                {{ totalTickets }}
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- AUCUN TICKET -->
-                    <div
-                        v-if="!tickets.data?.length"
-                        class="px-6 py-16 text-center"
-                    >
-                        <div class="text-5xl">
-                            🎫
-                        </div>
-
-                        <h3
-                            class="mt-4 text-lg font-semibold text-gray-900"
-                        >
-                            Aucun ticket trouvé
-                        </h3>
-
-                        <p class="mt-2 text-sm text-gray-500">
-                            Modifiez vos filtres ou créez un nouveau ticket.
-                        </p>
-
-                        <Link
-                            :href="route('tickets.create')"
-                            class="mt-5 inline-flex rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
-                        >
-                            + Créer un ticket
-                        </Link>
-                    </div>
-
-                    <!-- DESKTOP -->
-                    <div
-                        v-else
-                        class="hidden overflow-x-auto lg:block"
-                    >
-                        <table
-                            class="min-w-full divide-y divide-gray-200"
-                        >
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
-                                    >
-                                        Ticket
-                                    </th>
-
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
-                                    >
-                                        Client
-                                    </th>
-
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
-                                    >
-                                        Catégorie
-                                    </th>
-
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
-                                    >
-                                        Priorité
-                                    </th>
-
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
-                                    >
-                                        Statut
-                                    </th>
-
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
-                                    >
-                                        Agent
-                                    </th>
-
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
-                                    >
-                                        SLA
-                                    </th>
-
-                                    <th
-                                        class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500"
-                                    >
-                                        Action
-                                    </th>
-                                </tr>
-                            </thead>
-
-                            <tbody
-                                class="divide-y divide-gray-100 bg-white"
-                            >
-                                <tr
-                                    v-for="ticket in tickets.data"
-                                    :key="ticket.id"
-                                    class="transition hover:bg-gray-50"
-                                >
-                                    <!-- TICKET -->
-                                    <td class="px-6 py-4">
-                                        <Link
-                                            :href="
-                                                route(
-                                                    'tickets.show',
-                                                    ticket.id
-                                                )
-                                            "
-                                            class="font-semibold text-indigo-600 hover:text-indigo-800"
-                                        >
-                                            {{ ticketNumber(ticket) }}
-                                        </Link>
-
-                                        <p
-                                            class="mt-1 max-w-xs truncate text-sm font-medium text-gray-900"
-                                        >
-                                            {{ ticket.subject || "Sans sujet" }}
-                                        </p>
-
-                                        <div
-                                            class="mt-2 flex flex-wrap gap-1.5"
-                                        >
-                                            <span
-                                                class="rounded-full px-2.5 py-1 text-xs font-medium"
-                                                :class="
-                                                    channelClass(
-                                                        ticket.channel
-                                                    )
-                                                "
-                                            >
-                                                {{
-                                                    channelLabel(
-                                                        ticket.channel
-                                                    )
-                                                }}
-                                            </span>
-
-                                            <span
-                                                v-if="ticket.conversation_id"
-                                                class="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-medium text-violet-700"
-                                            >
-                                                Conversation
-                                            </span>
-                                        </div>
-                                    </td>
-
-                                    <!-- CLIENT -->
-                                    <td class="px-6 py-4">
-                                        <p
-                                            class="font-medium text-gray-900"
-                                        >
-                                            {{ getClientName(ticket) }}
-                                        </p>
-
-                                        <p
-                                            class="mt-1 text-xs text-gray-500"
-                                        >
-                                            {{ getClientContact(ticket) }}
-                                        </p>
-                                    </td>
-
-                                    <!-- CATEGORIE -->
-                                    <td class="px-6 py-4">
-                                        <span
-                                            class="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700"
-                                        >
-                                            {{
-                                                categoryLabel(
-                                                    ticket.category
-                                                )
-                                            }}
-                                        </span>
-                                    </td>
-
-                                    <!-- PRIORITE -->
-                                    <td class="px-6 py-4">
-                                        <span
-                                            class="rounded-full px-3 py-1 text-xs font-medium"
-                                            :class="
-                                                priorityClass(
-                                                    ticket.priority
-                                                )
-                                            "
-                                        >
-                                            {{
-                                                priorityLabel(
-                                                    ticket.priority
-                                                )
-                                            }}
-                                        </span>
-                                    </td>
-
-                                    <!-- STATUT -->
-                                    <td class="px-6 py-4">
-                                        <span
-                                            class="rounded-full px-3 py-1 text-xs font-medium"
-                                            :class="
-                                                statusClass(
-                                                    ticket.status
-                                                )
-                                            "
-                                        >
-                                            {{
-                                                statusLabel(
-                                                    ticket.status
-                                                )
-                                            }}
-                                        </span>
-                                    </td>
-
-                                    <!-- AGENT -->
-                                    <td class="px-6 py-4">
-                                        <span
-                                            class="rounded-full px-3 py-1 text-xs font-medium"
-                                            :class="agentClass(ticket)"
-                                        >
-                                            👤 {{ getAgentName(ticket) }}
-                                        </span>
-                                    </td>
-
-                                    <!-- SLA -->
-                                    <td class="px-6 py-4">
-                                        <span
-                                            class="rounded-full px-3 py-1 text-xs font-medium"
-                                            :class="slaClass(ticket)"
-                                        >
-                                            ⏱ {{ slaLabel(ticket) }}
-                                        </span>
-                                    </td>
-
-                                    <!-- ACTION -->
-                                    <td
-                                        class="whitespace-nowrap px-6 py-4 text-right"
-                                    >
-                                        <div
-                                            class="flex items-center justify-end gap-3"
-                                        >
-                                            <Link
-                                                :href="
-                                                    route(
-                                                        'tickets.show',
-                                                        ticket.id
-                                                    )
-                                                "
-                                                class="font-medium text-indigo-600 hover:text-indigo-900"
-                                            >
-                                                Voir
-                                            </Link>
-
-                                            <Link
-                                                :href="
-                                                    route(
-                                                        'tickets.edit',
-                                                        ticket.id
-                                                    )
-                                                "
-                                                class="font-medium text-gray-600 hover:text-gray-900"
-                                            >
-                                                Modifier
-                                            </Link>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- MOBILE -->
-                    <div
-                        v-if="tickets.data?.length"
-                        class="divide-y divide-gray-100 lg:hidden"
-                    >
-                        <div
-                            v-for="ticket in tickets.data"
-                            :key="ticket.id"
-                            class="p-5"
-                        >
-                            <div
-                                class="flex items-start justify-between gap-4"
-                            >
-                                <div class="min-w-0">
-                                    <Link
-                                        :href="
-                                            route(
-                                                'tickets.show',
-                                                ticket.id
-                                            )
-                                        "
-                                        class="font-bold text-indigo-600"
-                                    >
-                                        {{ ticketNumber(ticket) }}
-                                    </Link>
-
-                                    <p
-                                        class="mt-1 font-semibold text-gray-900"
-                                    >
-                                        {{
-                                            ticket.subject ||
-                                            "Sans sujet"
-                                        }}
-                                    </p>
-
-                                    <p
-                                        class="mt-1 text-sm text-gray-500"
-                                    >
-                                        {{ getClientName(ticket) }}
-                                    </p>
-                                </div>
-
-                                <span
-                                    class="shrink-0 rounded-full px-3 py-1 text-xs font-medium"
-                                    :class="
-                                        priorityClass(
-                                            ticket.priority
-                                        )
-                                    "
-                                >
-                                    {{
-                                        priorityLabel(
-                                            ticket.priority
-                                        )
-                                    }}
-                                </span>
-                            </div>
-
-                            <div
-                                class="mt-4 flex flex-wrap gap-2"
-                            >
-                                <span
-                                    class="rounded-full px-3 py-1 text-xs font-medium"
-                                    :class="
-                                        statusClass(
-                                            ticket.status
-                                        )
-                                    "
-                                >
-                                    {{
-                                        statusLabel(
-                                            ticket.status
-                                        )
-                                    }}
-                                </span>
-
-                                <span
-                                    class="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700"
-                                >
-                                    {{
-                                        categoryLabel(
-                                            ticket.category
-                                        )
-                                    }}
-                                </span>
-
-                                <span
-                                    class="rounded-full px-3 py-1 text-xs font-medium"
-                                    :class="
-                                        channelClass(
-                                            ticket.channel
-                                        )
-                                    "
-                                >
-                                    {{
-                                        channelLabel(
-                                            ticket.channel
-                                        )
-                                    }}
-                                </span>
-
-                                <span
-                                    class="rounded-full px-3 py-1 text-xs font-medium"
-                                    :class="agentClass(ticket)"
-                                >
-                                    👤 {{ getAgentName(ticket) }}
-                                </span>
-
-                                <span
-                                    class="rounded-full px-3 py-1 text-xs font-medium"
-                                    :class="slaClass(ticket)"
-                                >
-                                    ⏱ {{ slaLabel(ticket) }}
-                                </span>
-                            </div>
-
-                            <div
-                                class="mt-4 grid grid-cols-2 gap-3"
-                            >
-                                <div
-                                    class="rounded-xl bg-gray-50 p-3"
-                                >
-                                    <p
-                                        class="text-xs text-gray-500"
-                                    >
-                                        Canal
-                                    </p>
-
-                                    <p
-                                        class="mt-1 text-sm font-medium text-gray-800"
-                                    >
-                                        {{
-                                            channelLabel(
-                                                ticket.channel
-                                            )
-                                        }}
-                                    </p>
-                                </div>
-
-                                <div
-                                    class="rounded-xl bg-gray-50 p-3"
-                                >
-                                    <p
-                                        class="text-xs text-gray-500"
-                                    >
-                                        Client
-                                    </p>
-
-                                    <p
-                                        class="mt-1 truncate text-sm font-medium text-gray-800"
-                                    >
-                                        {{
-                                            getClientContact(
-                                                ticket
-                                            )
-                                        }}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="mt-4 flex gap-3">
-                                <Link
-                                    :href="
-                                        route(
-                                            'tickets.show',
-                                            ticket.id
-                                        )
-                                    "
-                                    class="inline-flex flex-1 items-center justify-center rounded-xl bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100"
-                                >
-                                    Voir
-                                </Link>
-
-                                <Link
-                                    :href="
-                                        route(
-                                            'tickets.edit',
-                                            ticket.id
-                                        )
-                                    "
-                                    class="inline-flex flex-1 items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
-                                >
-                                    Modifier
-                                </Link>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- PAGINATION -->
-                    <div
-                        v-if="paginationLinks.length > 3"
-                        class="flex flex-wrap items-center justify-center gap-2 border-t border-gray-200 px-6 py-5"
-                    >
-                        <template
-                            v-for="(link, index) in paginationLinks"
-                            :key="index"
-                        >
-                            <Link
-                                v-if="link.url"
-                                :href="link.url"
-                                preserve-scroll
-                                preserve-state
-                                class="rounded-lg border px-3 py-2 text-sm transition"
-                                :class="
-                                    link.active
-                                        ? 'border-indigo-600 bg-indigo-600 text-white'
-                                        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                        <tbody class="divide-y divide-line">
+                            <tr
+                                v-for="ticket in tickets.data"
+                                :key="ticket.id"
+                                class="cursor-pointer transition hover:bg-canvas-sunken"
+                                @click="
+                                    router.visit(
+                                        route('tickets.show', ticket.id),
+                                    )
                                 "
                             >
-                                <span v-html="link.label"></span>
-                            </Link>
+                                <td class="px-6 py-4">
+                                    <p
+                                        class="font-mono text-xs text-night-400"
+                                    >
+                                        {{ ticket.ticket_number }}
+                                    </p>
+                                    <p
+                                        class="mt-0.5 max-w-xs truncate font-medium text-night-900"
+                                    >
+                                        {{ ticket.subject }}
+                                    </p>
+                                </td>
 
-                            <span
-                                v-else
-                                class="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-400"
-                            >
-                                <span v-html="link.label"></span>
-                            </span>
-                        </template>
-                    </div>
-                </div>
+                                <td class="px-3 py-4 text-sm text-night-600">
+                                    {{ clientName(ticket) }}
+                                </td>
 
-                <!-- INFORMATION -->
-                <div
-                    class="mt-6 rounded-2xl border border-indigo-100 bg-indigo-50 p-5"
-                >
-                    <div class="flex items-start gap-4">
-                        <div
-                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100"
+                                <td class="px-3 py-4 text-sm text-night-500">
+                                    {{ categoryLabel(ticket.category) }}
+                                </td>
+
+                                <td class="px-3 py-4">
+                                    <StateBadge
+                                        kind="priority"
+                                        :value="ticket.priority"
+                                        dense
+                                    />
+                                </td>
+
+                                <td class="px-3 py-4">
+                                    <StateBadge
+                                        kind="status"
+                                        :value="ticket.status"
+                                        dense
+                                    />
+                                </td>
+
+                                <td class="px-3 py-4 text-sm">
+                                    <span
+                                        v-if="agentName(ticket)"
+                                        class="text-night-600"
+                                    >
+                                        {{ agentName(ticket) }}
+                                    </span>
+                                    <span
+                                        v-else
+                                        class="text-amber-600"
+                                    >
+                                        non attribué
+                                    </span>
+                                </td>
+
+                                <td
+                                    class="px-3 py-4 text-sm"
+                                    :class="slaState(ticket).tone"
+                                >
+                                    {{ slaState(ticket).label }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Mobile -->
+
+                    <div class="divide-y divide-line lg:hidden">
+                        <Link
+                            v-for="ticket in tickets.data"
+                            :key="ticket.id"
+                            :href="route('tickets.show', ticket.id)"
+                            class="block px-5 py-4 transition hover:bg-canvas-sunken"
                         >
-                            🎫
-                        </div>
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="font-mono text-xs text-night-400">
+                                        {{ ticket.ticket_number }}
+                                    </p>
+                                    <p
+                                        class="mt-0.5 truncate font-medium text-night-900"
+                                    >
+                                        {{ ticket.subject }}
+                                    </p>
+                                    <p
+                                        class="mt-1 truncate text-sm text-night-500"
+                                    >
+                                        {{ clientName(ticket) }}
+                                    </p>
+                                </div>
 
-                        <div>
-                            <h3
-                                class="font-semibold text-indigo-900"
-                            >
-                                Gestion des réclamations
-                            </h3>
+                                <StateBadge
+                                    kind="status"
+                                    :value="ticket.status"
+                                    dense
+                                />
+                            </div>
 
-                            <p
-                                class="mt-1 text-sm leading-6 text-indigo-800"
-                            >
-                                Les tickets permettent de centraliser les
-                                demandes clients, d'attribuer chaque dossier
-                                à un agent et de suivre les délais de
-                                résolution.
-                            </p>
-                        </div>
+                            <div class="mt-3 flex flex-wrap items-center gap-2">
+                                <StateBadge
+                                    kind="priority"
+                                    :value="ticket.priority"
+                                    dense
+                                />
+
+                                <span class="text-xs text-night-400">
+                                    {{ categoryLabel(ticket.category) }}
+                                </span>
+
+                                <span
+                                    class="ml-auto text-xs"
+                                    :class="slaState(ticket).tone"
+                                >
+                                    {{ slaState(ticket).label }}
+                                </span>
+                            </div>
+                        </Link>
                     </div>
                 </div>
+
+                <EmptyState
+                    v-else
+                    icon="🎫"
+                    title="Aucun ticket"
+                    :description="
+                        activeFilters
+                            ? 'Aucun ticket ne correspond à ces filtres.'
+                            : 'Les demandes nécessitant un suivi apparaîtront ici.'
+                    "
+                />
+            </SurfaceCard>
+
+            <!-- Pagination -->
+
+            <div
+                v-if="tickets.links && tickets.links.length > 3"
+                class="flex flex-wrap gap-1"
+            >
+                <Link
+                    v-for="link in tickets.links"
+                    :key="link.label"
+                    :href="link.url ?? '#'"
+                    class="rounded-lg px-3 py-1.5 text-sm transition"
+                    :class="[
+                        link.active
+                            ? 'bg-night-800 text-white'
+                            : 'bg-white text-night-600 ring-1 ring-line hover:bg-canvas-sunken',
+                        !link.url && 'pointer-events-none opacity-40',
+                    ]"
+                    v-html="link.label"
+                />
             </div>
         </div>
     </AuthenticatedLayout>

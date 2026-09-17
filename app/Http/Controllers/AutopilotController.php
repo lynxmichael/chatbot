@@ -8,6 +8,7 @@ use App\Models\Organization;
 use App\Services\AI\Autopilot\ActionExecutor;
 use App\Services\AI\Autopilot\AutopilotPolicy;
 use App\Services\AI\Tools\ToolRegistry;
+use App\Services\AI\Usage\UsageMeter;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -16,6 +17,7 @@ class AutopilotController extends Controller
     public function __construct(
         private readonly ToolRegistry $registry,
         private readonly ActionExecutor $executor,
+        private readonly UsageMeter $usage,
     ) {
     }
 
@@ -77,6 +79,8 @@ class AutopilotController extends Controller
                     ->critical()
                     ->count(),
             ],
+
+            'usage' => $this->usage->summary($organization),
         ]);
     }
 
@@ -223,8 +227,17 @@ class AutopilotController extends Controller
                 $request->input('type'),
                 fn ($query) => $query->where('type', $request->input('type'))
             )
+            /*
+             * FIELD() n'existe qu'en MySQL. Un CASE fait le même tri
+             * partout, y compris sous SQLite pendant les tests.
+             */
             ->orderByRaw(
-                "FIELD(severity, 'critical', 'high', 'medium', 'low')"
+                "CASE severity
+                    WHEN 'critical' THEN 0
+                    WHEN 'high' THEN 1
+                    WHEN 'medium' THEN 2
+                    ELSE 3
+                 END"
             )
             ->latest('detected_at')
             ->paginate(25)

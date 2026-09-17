@@ -104,15 +104,15 @@ const statusClass = (status) => {
             "bg-emerald-100 text-emerald-700",
 
         inactive:
-            "bg-gray-100 text-gray-700",
+            "bg-canvas-sunken text-night-600",
 
         blocked:
-            "bg-red-100 text-red-700",
+            "bg-rose-100 text-rose-700",
     };
 
     return (
         classes[status] ??
-        "bg-gray-100 text-gray-700"
+        "bg-canvas-sunken text-night-600"
     );
 };
 
@@ -145,12 +145,12 @@ const conversationStatusClass = (status) => {
             "bg-blue-100 text-blue-700",
 
         closed:
-            "bg-gray-100 text-gray-700",
+            "bg-canvas-sunken text-night-600",
     };
 
     return (
         classes[status] ??
-        "bg-gray-100 text-gray-700"
+        "bg-canvas-sunken text-night-600"
     );
 };
 
@@ -168,7 +168,7 @@ const priorityLabel = (priority) => {
 const priorityClass = (priority) => {
     const classes = {
         low:
-            "bg-gray-100 text-gray-700",
+            "bg-canvas-sunken text-night-600",
 
         normal:
             "bg-blue-100 text-blue-700",
@@ -177,12 +177,12 @@ const priorityClass = (priority) => {
             "bg-orange-100 text-orange-700",
 
         urgent:
-            "bg-red-100 text-red-700",
+            "bg-rose-100 text-rose-700",
     };
 
     return (
         classes[priority] ??
-        "bg-gray-100 text-gray-700"
+        "bg-canvas-sunken text-night-600"
     );
 };
 
@@ -230,12 +230,12 @@ const formatDate = (date) => {
             >
                 <div>
                     <h2
-                        class="text-xl font-semibold text-gray-800"
+                        class="text-xl font-semibold text-night-800"
                     >
                         Fiche client
                     </h2>
 
-                    <p class="mt-1 text-sm text-gray-500">
+                    <p class="mt-1 text-sm text-night-400">
                         Informations et historique du client.
                     </p>
                 </div>
@@ -249,14 +249,14 @@ const formatDate = (date) => {
                                 client.id
                             )
                         "
-                        class="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
+                        class="rounded-xl bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600"
                     >
                         Modifier
                     </Link>
 
                     <Link
                         :href="route('clients.index')"
-                        class="rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                        class="rounded-xl border border-line-strong bg-white px-4 py-2.5 text-sm font-medium text-night-600 transition hover:bg-canvas-sunken"
                     >
                         ← Retour aux clients
                     </Link>
@@ -274,10 +274,10 @@ const formatDate = (date) => {
                 =================================================== -->
 
                 <div
-                    class="overflow-hidden bg-white shadow-sm rounded-2xl ring-1 ring-gray-100"
+                    class="overflow-hidden bg-white shadow-sm rounded-2xl ring-1 ring-line"
                 >
                     <div
-                        class="px-6 py-8 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-white sm:px-8"
+                        class="px-6 py-8 border-b border-line bg-gradient-to-r from-brand-50 to-white sm:px-8"
                     >
                         <div
                             class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between"
@@ -289,7 +289,7 @@ const formatDate = (date) => {
                                 class="flex items-center gap-5"
                             >
                                 <div
-                                    class="flex items-center justify-center w-20 h-20 text-2xl font-bold text-indigo-700 bg-indigo-100 rounded-full shrink-0 ring-4 ring-white"
+                                    class="flex items-center justify-center w-20 h-20 text-2xl font-bold text-brand-700 bg-brand-100 rounded-full shrink-0 ring-4 ring-white"
                                 >
                                     {{ initials }}
                                 </div>
@@ -299,7 +299,7 @@ const formatDate = (date) => {
                                         class="flex flex-wrap items-center gap-3"
                                     >
                                         <h1
-                                            class="text-2xl font-bold text-gray-900"
+                                            class="text-2xl font-bold text-night-900"
                                         >
                                             {{ fullName }}
                                         </h1>
@@ -321,14 +321,14 @@ const formatDate = (date) => {
                                     </div>
 
                                     <p
-                                        class="mt-2 text-sm text-gray-500"
+                                        class="mt-2 text-sm text-night-400"
                                     >
                                         Client #{{ client.id }}
                                     </p>
 
                                     <p
                                         v-if="client.company"
-                                        class="mt-1 text-sm font-medium text-gray-700"
+                                        class="mt-1 text-sm font-medium text-night-600"
                                     >
                                         {{ client.company }}
                                     </p>
@@ -342,7 +342,7 @@ const formatDate = (date) => {
                                 <a
                                     v-if="client.phone"
                                     :href="`tel:${client.phone}`"
-                                    class="rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                                    class="rounded-xl border border-line-strong bg-white px-4 py-2.5 text-sm font-medium text-night-600 transition hover:bg-canvas-sunken"
                                 >
                                     📞 Appeler
                                 </a>
@@ -350,7 +350,7 @@ const formatDate = (date) => {
                                 <a
                                     v-if="client.email"
                                     :href="`mailto:${client.email}`"
-                                    class="rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                                    class="rounded-xl border border-line-strong bg-white px-4 py-2.5 text-sm font-medium text-night-600 transition hover:bg-canvas-sunken"
                                 >
                                     ✉️ Email
                                 </a>
@@ -365,7 +365,7 @@ const formatDate = (date) => {
                     <div class="p-6 sm:p-8">
 
                         <h2
-                            class="mb-5 text-lg font-semibold text-gray-900"
+                            class="mb-5 text-lg font-semibold text-night-900"
                         >
                             Informations personnelles
                         </h2>
@@ -377,16 +377,16 @@ const formatDate = (date) => {
                             <!-- Téléphone -->
 
                             <div
-                                class="p-4 rounded-xl bg-gray-50"
+                                class="p-4 rounded-xl bg-canvas-sunken"
                             >
                                 <p
-                                    class="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                    class="text-xs font-medium tracking-wide text-night-400 uppercase"
                                 >
                                     Téléphone
                                 </p>
 
                                 <p
-                                    class="mt-2 font-semibold text-gray-900"
+                                    class="mt-2 font-semibold text-night-900"
                                 >
                                     {{
                                         client.phone ||
@@ -398,16 +398,16 @@ const formatDate = (date) => {
                             <!-- Email -->
 
                             <div
-                                class="p-4 rounded-xl bg-gray-50"
+                                class="p-4 rounded-xl bg-canvas-sunken"
                             >
                                 <p
-                                    class="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                    class="text-xs font-medium tracking-wide text-night-400 uppercase"
                                 >
                                     Email
                                 </p>
 
                                 <p
-                                    class="mt-2 font-semibold text-gray-900 break-all"
+                                    class="mt-2 font-semibold text-night-900 break-all"
                                 >
                                     {{
                                         client.email ||
@@ -419,16 +419,16 @@ const formatDate = (date) => {
                             <!-- Entreprise -->
 
                             <div
-                                class="p-4 rounded-xl bg-gray-50"
+                                class="p-4 rounded-xl bg-canvas-sunken"
                             >
                                 <p
-                                    class="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                    class="text-xs font-medium tracking-wide text-night-400 uppercase"
                                 >
                                     Entreprise
                                 </p>
 
                                 <p
-                                    class="mt-2 font-semibold text-gray-900"
+                                    class="mt-2 font-semibold text-night-900"
                                 >
                                     {{
                                         client.company ||
@@ -440,16 +440,16 @@ const formatDate = (date) => {
                             <!-- Ville -->
 
                             <div
-                                class="p-4 rounded-xl bg-gray-50"
+                                class="p-4 rounded-xl bg-canvas-sunken"
                             >
                                 <p
-                                    class="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                    class="text-xs font-medium tracking-wide text-night-400 uppercase"
                                 >
                                     Ville
                                 </p>
 
                                 <p
-                                    class="mt-2 font-semibold text-gray-900"
+                                    class="mt-2 font-semibold text-night-900"
                                 >
                                     {{
                                         client.city ||
@@ -461,16 +461,16 @@ const formatDate = (date) => {
                             <!-- Pays -->
 
                             <div
-                                class="p-4 rounded-xl bg-gray-50"
+                                class="p-4 rounded-xl bg-canvas-sunken"
                             >
                                 <p
-                                    class="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                    class="text-xs font-medium tracking-wide text-night-400 uppercase"
                                 >
                                     Pays
                                 </p>
 
                                 <p
-                                    class="mt-2 font-semibold text-gray-900"
+                                    class="mt-2 font-semibold text-night-900"
                                 >
                                     {{
                                         client.country ||
@@ -482,16 +482,16 @@ const formatDate = (date) => {
                             <!-- Adresse -->
 
                             <div
-                                class="p-4 rounded-xl bg-gray-50"
+                                class="p-4 rounded-xl bg-canvas-sunken"
                             >
                                 <p
-                                    class="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                    class="text-xs font-medium tracking-wide text-night-400 uppercase"
                                 >
                                     Adresse
                                 </p>
 
                                 <p
-                                    class="mt-2 font-semibold text-gray-900"
+                                    class="mt-2 font-semibold text-night-900"
                                 >
                                     {{
                                         client.address ||
@@ -504,16 +504,16 @@ const formatDate = (date) => {
                         <!-- Notes -->
 
                         <div
-                            class="p-5 mt-6 bg-white border border-gray-100 rounded-xl"
+                            class="p-5 mt-6 bg-white border border-line rounded-xl"
                         >
                             <p
-                                class="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                class="text-xs font-medium tracking-wide text-night-400 uppercase"
                             >
                                 Notes
                             </p>
 
                             <p
-                                class="mt-3 text-sm leading-6 text-gray-700 whitespace-pre-line"
+                                class="mt-3 text-sm leading-6 text-night-600 whitespace-pre-line"
                             >
                                 {{
                                     client.notes ||
@@ -533,27 +533,27 @@ const formatDate = (date) => {
                 >
 
                     <div
-                        class="p-5 bg-white shadow-sm rounded-2xl ring-1 ring-gray-100"
+                        class="p-5 bg-white shadow-sm rounded-2xl ring-1 ring-line"
                     >
-                        <p class="text-sm text-gray-500">
+                        <p class="text-sm text-night-400">
                             Conversations
                         </p>
 
                         <p
-                            class="mt-2 text-3xl font-bold text-indigo-600"
+                            class="mt-2 text-3xl font-bold text-brand-600"
                         >
                             {{ conversationsCount }}
                         </p>
 
-                        <p class="mt-1 text-xs text-gray-400">
+                        <p class="mt-1 text-xs text-night-300">
                             Historique total
                         </p>
                     </div>
 
                     <div
-                        class="p-5 bg-white shadow-sm rounded-2xl ring-1 ring-gray-100"
+                        class="p-5 bg-white shadow-sm rounded-2xl ring-1 ring-line"
                     >
-                        <p class="text-sm text-gray-500">
+                        <p class="text-sm text-night-400">
                             Conversations ouvertes
                         </p>
 
@@ -563,15 +563,15 @@ const formatDate = (date) => {
                             {{ openConversationsCount }}
                         </p>
 
-                        <p class="mt-1 text-xs text-gray-400">
+                        <p class="mt-1 text-xs text-night-300">
                             Nécessitent potentiellement une action
                         </p>
                     </div>
 
                     <div
-                        class="p-5 bg-white shadow-sm rounded-2xl ring-1 ring-gray-100"
+                        class="p-5 bg-white shadow-sm rounded-2xl ring-1 ring-line"
                     >
-                        <p class="text-sm text-gray-500">
+                        <p class="text-sm text-night-400">
                             Conversations résolues
                         </p>
 
@@ -581,7 +581,7 @@ const formatDate = (date) => {
                             {{ resolvedConversationsCount }}
                         </p>
 
-                        <p class="mt-1 text-xs text-gray-400">
+                        <p class="mt-1 text-xs text-night-300">
                             Dossiers traités
                         </p>
                     </div>
@@ -592,21 +592,21 @@ const formatDate = (date) => {
                 =================================================== -->
 
                 <div
-                    class="mt-6 overflow-hidden bg-white shadow-sm rounded-2xl ring-1 ring-gray-100"
+                    class="mt-6 overflow-hidden bg-white shadow-sm rounded-2xl ring-1 ring-line"
                 >
 
                     <div
-                        class="flex flex-col gap-3 px-6 py-5 border-b border-gray-100 sm:flex-row sm:items-center sm:justify-between"
+                        class="flex flex-col gap-3 px-6 py-5 border-b border-line sm:flex-row sm:items-center sm:justify-between"
                     >
                         <div>
                             <h2
-                                class="text-lg font-semibold text-gray-900"
+                                class="text-lg font-semibold text-night-900"
                             >
                                 Historique des conversations
                             </h2>
 
                             <p
-                                class="mt-1 text-sm text-gray-500"
+                                class="mt-1 text-sm text-night-400"
                             >
                                 Les échanges récents avec ce client.
                             </p>
@@ -614,7 +614,7 @@ const formatDate = (date) => {
 
                         <Link
                             :href="route('conversations.index')"
-                            class="text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+                            class="text-sm font-semibold text-brand-600 hover:text-brand-700"
                         >
                             Toutes les conversations →
                         </Link>
@@ -631,13 +631,13 @@ const formatDate = (date) => {
                         </div>
 
                         <h3
-                            class="mt-4 text-lg font-semibold text-gray-900"
+                            class="mt-4 text-lg font-semibold text-night-900"
                         >
                             Aucune conversation
                         </h3>
 
                         <p
-                            class="mt-2 text-sm text-gray-500"
+                            class="mt-2 text-sm text-night-400"
                         >
                             Ce client n’a encore aucune conversation.
                         </p>
@@ -647,7 +647,7 @@ const formatDate = (date) => {
 
                     <div
                         v-else
-                        class="divide-y divide-gray-100"
+                        class="divide-y divide-line"
                     >
                         <Link
                             v-for="conversation in conversations"
@@ -658,7 +658,7 @@ const formatDate = (date) => {
                                     conversation.id
                                 )
                             "
-                            class="block px-6 py-5 transition hover:bg-gray-50"
+                            class="block px-6 py-5 transition hover:bg-canvas-sunken"
                         >
                             <div
                                 class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
@@ -671,7 +671,7 @@ const formatDate = (date) => {
                                         class="flex flex-wrap items-center gap-2"
                                     >
                                         <h3
-                                            class="font-semibold text-gray-900"
+                                            class="font-semibold text-night-900"
                                         >
                                             {{
                                                 conversation.subject ||
@@ -700,7 +700,7 @@ const formatDate = (date) => {
                                     >
                                         <span
                                             v-if="conversation.channel"
-                                            class="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-full"
+                                            class="px-3 py-1 text-xs font-medium text-night-500 bg-canvas-sunken rounded-full"
                                         >
                                             {{
                                                 channelLabel(
@@ -737,7 +737,7 @@ const formatDate = (date) => {
 
                                         <span
                                             v-else
-                                            class="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-full"
+                                            class="px-3 py-1 text-xs font-medium text-night-500 bg-canvas-sunken rounded-full"
                                         >
                                             👤 Agent
                                         </span>
@@ -750,13 +750,13 @@ const formatDate = (date) => {
                                     class="text-left shrink-0 lg:text-right"
                                 >
                                     <p
-                                        class="text-xs text-gray-400"
+                                        class="text-xs text-night-300"
                                     >
                                         Dernière activité
                                     </p>
 
                                     <p
-                                        class="mt-1 text-sm font-medium text-gray-700"
+                                        class="mt-1 text-sm font-medium text-night-600"
                                     >
                                         {{
                                             formatDate(
@@ -770,7 +770,7 @@ const formatDate = (date) => {
                                             conversation.assigned_agent?.name ||
                                             conversation.assignedAgent?.name
                                         "
-                                        class="mt-1 text-xs text-gray-500"
+                                        class="mt-1 text-xs text-night-400"
                                     >
                                         👤
                                         {{
@@ -798,26 +798,26 @@ const formatDate = (date) => {
                                 client.id
                             )
                         "
-                        class="p-5 transition bg-white border border-gray-200 shadow-sm rounded-2xl hover:border-indigo-200 hover:bg-indigo-50"
+                        class="p-5 transition bg-white border border-line shadow-sm rounded-2xl hover:border-brand-200 hover:bg-brand-50"
                     >
                         <div
                             class="flex items-center gap-4"
                         >
                             <div
-                                class="flex items-center justify-center text-xl bg-indigo-100 h-11 w-11 rounded-xl"
+                                class="flex items-center justify-center text-xl bg-brand-100 h-11 w-11 rounded-xl"
                             >
                                 ✏️
                             </div>
 
                             <div>
                                 <h3
-                                    class="font-semibold text-gray-900"
+                                    class="font-semibold text-night-900"
                                 >
                                     Modifier le client
                                 </h3>
 
                                 <p
-                                    class="mt-1 text-sm text-gray-500"
+                                    class="mt-1 text-sm text-night-400"
                                 >
                                     Mettre à jour ses informations.
                                 </p>
@@ -827,7 +827,7 @@ const formatDate = (date) => {
 
                     <Link
                         :href="route('conversations.index')"
-                        class="p-5 transition bg-white border border-gray-200 shadow-sm rounded-2xl hover:border-emerald-200 hover:bg-emerald-50"
+                        class="p-5 transition bg-white border border-line shadow-sm rounded-2xl hover:border-emerald-200 hover:bg-emerald-50"
                     >
                         <div
                             class="flex items-center gap-4"
@@ -840,13 +840,13 @@ const formatDate = (date) => {
 
                             <div>
                                 <h3
-                                    class="font-semibold text-gray-900"
+                                    class="font-semibold text-night-900"
                                 >
                                     Voir les conversations
                                 </h3>
 
                                 <p
-                                    class="mt-1 text-sm text-gray-500"
+                                    class="mt-1 text-sm text-night-400"
                                 >
                                     Accéder au centre de support.
                                 </p>

@@ -3,7 +3,9 @@
 namespace App\Services\AI\Tools;
 
 use App\Models\Ticket;
+use App\Models\FollowUp;
 use App\Services\AI\Support\AgentRouter;
+use App\Services\AI\Support\BusinessHours;
 use App\Services\AI\Support\SlaCalculator;
 use Illuminate\Support\Str;
 
@@ -11,7 +13,8 @@ class EscalateToHumanTool implements Tool
 {
     public function __construct(
         private readonly AgentRouter $router,
-        private readonly SlaCalculator $sla
+        private readonly SlaCalculator $sla,
+        private readonly BusinessHours $hours
     ) {
     }
 
@@ -107,6 +110,14 @@ class EscalateToHumanTool implements Tool
 
         $summary = trim((string) ($input['summary'] ?? ''));
 
+        /*
+         * Personne ne peut décrocher : service fermé, ou tous les
+         * conseillers déjà occupés. Le transfert devient un rappel
+         * programmé, et l'IA doit l'annoncer comme tel plutôt que de
+         * promettre une mise en relation qui n'arrivera pas.
+         */
+        $reachable = $this->hours->hasReachableAgent($context->organization);
+
         $agentId = $this->router->pick(
             $context->organization->id,
             $category,
@@ -192,16 +203,56 @@ class EscalateToHumanTool implements Tool
             $context->recordEffect('ticket_number', $ticketNumber);
         }
 
+        if ($reachable) {
+            return [
+                'success' => true,
+                'transfer' => 'immediate',
+                'ticket_number' => $ticketNumber,
+                'message' => 'Un conseiller est joignable : la mise en '
+                    . 'relation se fait maintenant. Annonce-le au client '
+                    . 'en une phrase courte.',
+            ];
+        }
+
+        /*
+         * Rappel programmé à la réouverture. Le client repart avec une
+         * heure, pas avec « nous reviendrons vers vous ».
+         */
+        $callbackAt = $this->hours->nextOpening($context->organization);
+
+        $context->recordEffect('deferred', true);
+
+        $context->recordEffect('callback_at', $callbackAt->toDateTimeString());
+
+        if ($context->client) {
+            FollowUp::create([
+                'organization_id' => $context->organization->id,
+                'client_id' => $context->client->id,
+                'conversation_id' => $conversation->id,
+                'ticket_id' => $context->effects['ticket_id'] ?? null,
+                'instruction' => 'Rappeler le client : ' . $reason
+                    . ' — demande reçue en dehors des heures d\'ouverture '
+                    . 'ou alors que tous les conseillers étaient occupés.',
+                'channel' => $context->channel,
+                'run_at' => $callbackAt,
+                'status' => 'pending',
+                'created_by_ai' => true,
+            ]);
+        }
+
         return [
             'success' => true,
-            'assigned' => (bool) $agentId,
+            'transfer' => 'deferred',
             'ticket_number' => $ticketNumber,
-            'message' => $agentId
-                ? 'Conversation transférée à un conseiller. '
-                    . 'Informer le client que quelqu\'un prend le relais.'
-                : 'Transfert enregistré, mais aucun conseiller n\'est disponible '
-                    . 'immédiatement. Annoncer un rappel dès que possible, '
-                    . 'sans promettre d\'horaire précis.',
+            'callback_at' => $this->hours->nextOpeningInWords(
+                $context->organization
+            ),
+            'message' => 'AUCUN conseiller ne peut décrocher maintenant. '
+                . 'Ne promets pas de mise en relation. Rassemble les '
+                . 'informations utiles, confirme que la demande est '
+                . 'enregistrée, et annonce un rappel '
+                . $this->hours->nextOpeningInWords($context->organization)
+                . '. Donne le numéro de ticket s\'il existe.',
         ];
     }
 

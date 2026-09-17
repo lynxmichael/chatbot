@@ -129,13 +129,13 @@ const hasErrors = computed(() => {
             >
                 <div>
                     <h2
-                        class="text-xl font-semibold text-gray-800"
+                        class="text-xl font-semibold text-night-800"
                     >
                         Nouveau ticket
                     </h2>
 
                     <p
-                        class="mt-1 text-sm text-gray-500"
+                        class="mt-1 text-sm text-night-400"
                     >
                         Créez une nouvelle réclamation ou demande client.
                     </p>
@@ -143,7 +143,7 @@ const hasErrors = computed(() => {
 
                 <Link
                     :href="route('tickets.index')"
-                    class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                    class="inline-flex items-center justify-center rounded-xl border border-line-strong bg-white px-4 py-2.5 text-sm font-medium text-night-600 transition hover:bg-canvas-sunken"
                 >
                     ← Retour aux tickets
                 </Link>
@@ -161,7 +161,7 @@ const hasErrors = computed(() => {
 
                 <div
                     v-if="hasErrors"
-                    class="p-5 mb-6 border border-red-200 rounded-2xl bg-red-50"
+                    class="p-5 mb-6 border border-rose-200 rounded-2xl bg-rose-50"
                 >
                     <div class="flex items-start gap-3">
                         <span class="text-xl">
@@ -170,13 +170,13 @@ const hasErrors = computed(() => {
 
                         <div>
                             <h3
-                                class="font-semibold text-red-800"
+                                class="font-semibold text-rose-800"
                             >
                                 Vérifiez les informations saisies
                             </h3>
 
                             <p
-                                class="mt-1 text-sm text-red-700"
+                                class="mt-1 text-sm text-rose-700"
                             >
                                 Certains champs du ticket contiennent une erreur.
                             </p>
@@ -189,33 +189,33 @@ const hasErrors = computed(() => {
                 ======================================================= -->
 
                 <div
-                    class="overflow-hidden bg-white shadow-sm rounded-2xl ring-1 ring-gray-100"
+                    class="overflow-hidden bg-white shadow-sm rounded-2xl ring-1 ring-line"
                 >
 
                     <!-- En-tête -->
 
                     <div
-                        class="px-6 py-6 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-white sm:px-8"
+                        class="px-6 py-6 border-b border-line bg-gradient-to-r from-brand-50 to-white sm:px-8"
                     >
                         <div class="flex items-center gap-4">
                             <div
-                                class="flex items-center justify-center w-12 h-12 text-xl bg-indigo-100 rounded-xl"
+                                class="flex items-center justify-center w-12 h-12 text-xl bg-brand-100 rounded-xl"
                             >
                                 🎫
                             </div>
 
                             <div>
                                 <h1
-                                    class="text-lg font-semibold text-gray-900"
+                                    class="text-lg font-semibold text-night-900"
                                 >
                                     Informations du ticket
                                 </h1>
 
                                 <p
-                                    class="mt-1 text-sm text-gray-500"
+                                    class="mt-1 text-sm text-night-400"
                                 >
                                     Les informations marquées d’un
-                                    <span class="font-semibold text-red-500">*</span>
+                                    <span class="font-semibold text-rose-500">*</span>
                                     sont obligatoires.
                                 </p>
                             </div>
@@ -233,7 +233,7 @@ const hasErrors = computed(() => {
 
                         <section>
                             <h3
-                                class="mb-4 text-base font-semibold text-gray-900"
+                                class="mb-4 text-base font-semibold text-night-900"
                             >
                                 Client concerné
                             </h3>
@@ -245,19 +245,19 @@ const hasErrors = computed(() => {
                                 <div class="md:col-span-2">
                                     <label
                                         for="client_id"
-                                        class="block text-sm font-medium text-gray-700"
+                                        class="block text-sm font-medium text-night-600"
                                     >
                                         Client
-                                        <span class="text-red-500">*</span>
+                                        <span class="text-rose-500">*</span>
                                     </label>
 
                                     <select
                                         id="client_id"
                                         v-model="form.client_id"
                                         required
-                                        class="mt-1.5 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        class="mt-1.5 block w-full rounded-xl border-line-strong shadow-sm focus:border-brand-400 focus:ring-brand-400"
                                         :class="{
-                                            'border-red-400':
+                                            'border-rose-400':
                                                 form.errors.client_id,
                                         }"
                                     >
@@ -282,7 +282,7 @@ const hasErrors = computed(() => {
 
                                     <p
                                         v-if="form.errors.client_id"
-                                        class="mt-1.5 text-sm text-red-600"
+                                        class="mt-1.5 text-sm text-rose-600"
                                     >
                                         {{ form.errors.client_id }}
                                     </p>
@@ -292,20 +292,20 @@ const hasErrors = computed(() => {
 
                                 <div
                                     v-if="selectedClient"
-                                    class="p-4 border border-indigo-100 md:col-span-2 rounded-xl bg-indigo-50"
+                                    class="p-4 border border-brand-100 md:col-span-2 rounded-xl bg-brand-50"
                                 >
                                     <div
                                         class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
                                     >
                                         <div>
                                             <p
-                                                class="text-sm font-semibold text-indigo-900"
+                                                class="text-sm font-semibold text-brand-900"
                                             >
                                                 {{ getClientName(selectedClient) }}
                                             </p>
 
                                             <p
-                                                class="mt-1 text-xs text-indigo-700"
+                                                class="mt-1 text-xs text-brand-700"
                                             >
                                                 {{
                                                     selectedClient.email ||
@@ -315,7 +315,7 @@ const hasErrors = computed(() => {
                                         </div>
 
                                         <div
-                                            class="text-sm text-indigo-800"
+                                            class="text-sm text-brand-800"
                                         >
                                             📞
                                             {{
@@ -331,7 +331,7 @@ const hasErrors = computed(() => {
                                 <div>
                                     <label
                                         for="conversation_id"
-                                        class="block text-sm font-medium text-gray-700"
+                                        class="block text-sm font-medium text-night-600"
                                     >
                                         Conversation associée
                                     </label>
@@ -342,15 +342,15 @@ const hasErrors = computed(() => {
                                         type="number"
                                         min="1"
                                         placeholder="ID de conversation, facultatif"
-                                        class="mt-1.5 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        class="mt-1.5 block w-full rounded-xl border-line-strong shadow-sm focus:border-brand-400 focus:ring-brand-400"
                                         :class="{
-                                            'border-red-400':
+                                            'border-rose-400':
                                                 form.errors.conversation_id,
                                         }"
                                     />
 
                                     <p
-                                        class="mt-1 text-xs text-gray-400"
+                                        class="mt-1 text-xs text-night-300"
                                     >
                                         Laissez vide si le ticket ne provient
                                         pas d’une conversation existante.
@@ -358,7 +358,7 @@ const hasErrors = computed(() => {
 
                                     <p
                                         v-if="form.errors.conversation_id"
-                                        class="mt-1.5 text-sm text-red-600"
+                                        class="mt-1.5 text-sm text-rose-600"
                                     >
                                         {{ form.errors.conversation_id }}
                                     </p>
@@ -369,7 +369,7 @@ const hasErrors = computed(() => {
                                 <div>
                                     <label
                                         for="assigned_to"
-                                        class="block text-sm font-medium text-gray-700"
+                                        class="block text-sm font-medium text-night-600"
                                     >
                                         Agent responsable
                                     </label>
@@ -377,9 +377,9 @@ const hasErrors = computed(() => {
                                     <select
                                         id="assigned_to"
                                         v-model="form.assigned_to"
-                                        class="mt-1.5 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        class="mt-1.5 block w-full rounded-xl border-line-strong shadow-sm focus:border-brand-400 focus:ring-brand-400"
                                         :class="{
-                                            'border-red-400':
+                                            'border-rose-400':
                                                 form.errors.assigned_to,
                                         }"
                                     >
@@ -403,7 +403,7 @@ const hasErrors = computed(() => {
 
                                     <p
                                         v-if="form.errors.assigned_to"
-                                        class="mt-1.5 text-sm text-red-600"
+                                        class="mt-1.5 text-sm text-rose-600"
                                     >
                                         {{ form.errors.assigned_to }}
                                     </p>
@@ -416,10 +416,10 @@ const hasErrors = computed(() => {
                         =================================================== -->
 
                         <section
-                            class="pt-8 border-t border-gray-100"
+                            class="pt-8 border-t border-line"
                         >
                             <h3
-                                class="mb-4 text-base font-semibold text-gray-900"
+                                class="mb-4 text-base font-semibold text-night-900"
                             >
                                 Demande
                             </h3>
@@ -429,10 +429,10 @@ const hasErrors = computed(() => {
                             <div>
                                 <label
                                     for="subject"
-                                    class="block text-sm font-medium text-gray-700"
+                                    class="block text-sm font-medium text-night-600"
                                 >
                                     Sujet
-                                    <span class="text-red-500">*</span>
+                                    <span class="text-rose-500">*</span>
                                 </label>
 
                                 <input
@@ -442,9 +442,9 @@ const hasErrors = computed(() => {
                                     required
                                     maxlength="255"
                                     placeholder="Ex. Problème de connexion à mon compte"
-                                    class="mt-1.5 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    class="mt-1.5 block w-full rounded-xl border-line-strong shadow-sm focus:border-brand-400 focus:ring-brand-400"
                                     :class="{
-                                        'border-red-400':
+                                        'border-rose-400':
                                             form.errors.subject,
                                     }"
                                 />
@@ -454,14 +454,14 @@ const hasErrors = computed(() => {
                                 >
                                     <p
                                         v-if="form.errors.subject"
-                                        class="text-sm text-red-600"
+                                        class="text-sm text-rose-600"
                                     >
                                         {{ form.errors.subject }}
                                     </p>
 
                                     <p
                                         v-else
-                                        class="text-xs text-gray-400"
+                                        class="text-xs text-night-300"
                                     >
                                         {{ form.subject.length }}/255
                                     </p>
@@ -473,10 +473,10 @@ const hasErrors = computed(() => {
                             <div class="mt-5">
                                 <label
                                     for="description"
-                                    class="block text-sm font-medium text-gray-700"
+                                    class="block text-sm font-medium text-night-600"
                                 >
                                     Description
-                                    <span class="text-red-500">*</span>
+                                    <span class="text-rose-500">*</span>
                                 </label>
 
                                 <textarea
@@ -485,16 +485,16 @@ const hasErrors = computed(() => {
                                     rows="7"
                                     required
                                     placeholder="Décrivez précisément le problème, la demande ou la réclamation..."
-                                    class="mt-1.5 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    class="mt-1.5 block w-full rounded-xl border-line-strong shadow-sm focus:border-brand-400 focus:ring-brand-400"
                                     :class="{
-                                        'border-red-400':
+                                        'border-rose-400':
                                             form.errors.description,
                                     }"
                                 ></textarea>
 
                                 <p
                                     v-if="form.errors.description"
-                                    class="mt-1.5 text-sm text-red-600"
+                                    class="mt-1.5 text-sm text-rose-600"
                                 >
                                     {{ form.errors.description }}
                                 </p>
@@ -506,10 +506,10 @@ const hasErrors = computed(() => {
                         =================================================== -->
 
                         <section
-                            class="pt-8 border-t border-gray-100"
+                            class="pt-8 border-t border-line"
                         >
                             <h3
-                                class="mb-4 text-base font-semibold text-gray-900"
+                                class="mb-4 text-base font-semibold text-night-900"
                             >
                                 Classification
                             </h3>
@@ -523,18 +523,18 @@ const hasErrors = computed(() => {
                                 <div>
                                     <label
                                         for="category"
-                                        class="block text-sm font-medium text-gray-700"
+                                        class="block text-sm font-medium text-night-600"
                                     >
                                         Catégorie
-                                        <span class="text-red-500">*</span>
+                                        <span class="text-rose-500">*</span>
                                     </label>
 
                                     <select
                                         id="category"
                                         v-model="form.category"
-                                        class="mt-1.5 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        class="mt-1.5 block w-full rounded-xl border-line-strong shadow-sm focus:border-brand-400 focus:ring-brand-400"
                                         :class="{
-                                            'border-red-400':
+                                            'border-rose-400':
                                                 form.errors.category,
                                         }"
                                     >
@@ -573,7 +573,7 @@ const hasErrors = computed(() => {
 
                                     <p
                                         v-if="form.errors.category"
-                                        class="mt-1.5 text-sm text-red-600"
+                                        class="mt-1.5 text-sm text-rose-600"
                                     >
                                         {{ form.errors.category }}
                                     </p>
@@ -584,16 +584,16 @@ const hasErrors = computed(() => {
                                 <div>
                                     <label
                                         for="priority"
-                                        class="block text-sm font-medium text-gray-700"
+                                        class="block text-sm font-medium text-night-600"
                                     >
                                         Priorité
-                                        <span class="text-red-500">*</span>
+                                        <span class="text-rose-500">*</span>
                                     </label>
 
                                     <select
                                         id="priority"
                                         v-model="form.priority"
-                                        class="mt-1.5 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        class="mt-1.5 block w-full rounded-xl border-line-strong shadow-sm focus:border-brand-400 focus:ring-brand-400"
                                     >
                                         <option value="low">
                                             Faible
@@ -614,7 +614,7 @@ const hasErrors = computed(() => {
 
                                     <p
                                         v-if="form.errors.priority"
-                                        class="mt-1.5 text-sm text-red-600"
+                                        class="mt-1.5 text-sm text-rose-600"
                                     >
                                         {{ form.errors.priority }}
                                     </p>
@@ -625,16 +625,16 @@ const hasErrors = computed(() => {
                                 <div>
                                     <label
                                         for="channel"
-                                        class="block text-sm font-medium text-gray-700"
+                                        class="block text-sm font-medium text-night-600"
                                     >
                                         Canal
-                                        <span class="text-red-500">*</span>
+                                        <span class="text-rose-500">*</span>
                                     </label>
 
                                     <select
                                         id="channel"
                                         v-model="form.channel"
-                                        class="mt-1.5 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        class="mt-1.5 block w-full rounded-xl border-line-strong shadow-sm focus:border-brand-400 focus:ring-brand-400"
                                     >
                                         <option value="web">
                                             Web
@@ -659,7 +659,7 @@ const hasErrors = computed(() => {
 
                                     <p
                                         v-if="form.errors.channel"
-                                        class="mt-1.5 text-sm text-red-600"
+                                        class="mt-1.5 text-sm text-rose-600"
                                     >
                                         {{ form.errors.channel }}
                                     </p>
@@ -670,16 +670,16 @@ const hasErrors = computed(() => {
                                 <div>
                                     <label
                                         for="status"
-                                        class="block text-sm font-medium text-gray-700"
+                                        class="block text-sm font-medium text-night-600"
                                     >
                                         Statut initial
-                                        <span class="text-red-500">*</span>
+                                        <span class="text-rose-500">*</span>
                                     </label>
 
                                     <select
                                         id="status"
                                         v-model="form.status"
-                                        class="mt-1.5 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        class="mt-1.5 block w-full rounded-xl border-line-strong shadow-sm focus:border-brand-400 focus:ring-brand-400"
                                     >
                                         <option value="open">
                                             Ouvert
@@ -696,7 +696,7 @@ const hasErrors = computed(() => {
 
                                     <p
                                         v-if="form.errors.status"
-                                        class="mt-1.5 text-sm text-red-600"
+                                        class="mt-1.5 text-sm text-rose-600"
                                     >
                                         {{ form.errors.status }}
                                     </p>
@@ -709,20 +709,20 @@ const hasErrors = computed(() => {
                         =================================================== -->
 
                         <section
-                            class="pt-8 border-t border-gray-100"
+                            class="pt-8 border-t border-line"
                         >
                             <div
                                 class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
                             >
                                 <div>
                                     <h3
-                                        class="text-base font-semibold text-gray-900"
+                                        class="text-base font-semibold text-night-900"
                                     >
                                         Délai SLA
                                     </h3>
 
                                     <p
-                                        class="mt-1 text-sm text-gray-500"
+                                        class="mt-1 text-sm text-night-400"
                                     >
                                         Définissez une échéance de traitement.
                                     </p>
@@ -730,7 +730,7 @@ const hasErrors = computed(() => {
 
                                 <button
                                     type="button"
-                                    class="text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+                                    class="text-sm font-semibold text-brand-600 hover:text-brand-700"
                                     @click="
                                         showAdvanced =
                                             !showAdvanced
@@ -751,7 +751,7 @@ const hasErrors = computed(() => {
                             >
                                 <label
                                     for="sla_due_at"
-                                    class="block text-sm font-medium text-gray-700"
+                                    class="block text-sm font-medium text-night-600"
                                 >
                                     Échéance SLA
                                 </label>
@@ -760,12 +760,12 @@ const hasErrors = computed(() => {
                                     id="sla_due_at"
                                     v-model="form.sla_due_at"
                                     type="datetime-local"
-                                    class="mt-1.5 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    class="mt-1.5 block w-full rounded-xl border-line-strong shadow-sm focus:border-brand-400 focus:ring-brand-400"
                                 />
 
                                 <p
                                     v-if="form.errors.sla_due_at"
-                                    class="mt-1.5 text-sm text-red-600"
+                                    class="mt-1.5 text-sm text-rose-600"
                                 >
                                     {{ form.errors.sla_due_at }}
                                 </p>
@@ -777,11 +777,11 @@ const hasErrors = computed(() => {
                         =================================================== -->
 
                         <div
-                            class="flex flex-col-reverse gap-3 pt-6 border-t border-gray-100 sm:flex-row sm:justify-end"
+                            class="flex flex-col-reverse gap-3 pt-6 border-t border-line sm:flex-row sm:justify-end"
                         >
                             <Link
                                 :href="route('tickets.index')"
-                                class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                                class="inline-flex items-center justify-center rounded-xl border border-line-strong bg-white px-5 py-2.5 text-sm font-medium text-night-600 transition hover:bg-canvas-sunken"
                             >
                                 Annuler
                             </Link>
@@ -789,7 +789,7 @@ const hasErrors = computed(() => {
                             <button
                                 type="submit"
                                 :disabled="form.processing"
-                                class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                class="inline-flex items-center justify-center rounded-xl bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <span
                                     v-if="form.processing"
@@ -811,24 +811,24 @@ const hasErrors = computed(() => {
                 ======================================================= -->
 
                 <div
-                    class="p-5 mt-6 border border-indigo-100 rounded-2xl bg-indigo-50"
+                    class="p-5 mt-6 border border-brand-100 rounded-2xl bg-brand-50"
                 >
                     <div class="flex items-start gap-4">
                         <div
-                            class="flex items-center justify-center w-10 h-10 bg-indigo-100 shrink-0 rounded-xl"
+                            class="flex items-center justify-center w-10 h-10 bg-brand-100 shrink-0 rounded-xl"
                         >
                             💡
                         </div>
 
                         <div>
                             <h3
-                                class="font-semibold text-indigo-900"
+                                class="font-semibold text-brand-900"
                             >
                                 Bon à savoir
                             </h3>
 
                             <p
-                                class="mt-1 text-sm leading-6 text-indigo-800"
+                                class="mt-1 text-sm leading-6 text-brand-800"
                             >
                                 Un ticket peut être associé à une conversation
                                 existante et attribué directement à un agent.

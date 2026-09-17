@@ -3,6 +3,7 @@
 namespace App\Services\AI;
 
 use App\Services\AI\Autopilot\AutopilotPolicy;
+use App\Services\AI\Support\BusinessHours;
 use App\Services\AI\Tools\ToolContext;
 use Carbon\Carbon;
 
@@ -15,6 +16,11 @@ use Carbon\Carbon;
  */
 class PromptBuilder
 {
+    public function __construct(
+        private readonly BusinessHours $hours
+    ) {
+    }
+
     public function build(ToolContext $context, array $tools): string
     {
         $policy = $context->policy;
@@ -37,7 +43,7 @@ class PromptBuilder
 
         $conversationBlock = $this->conversationBlock($context);
 
-        $businessHours = $this->businessHoursBlock();
+        $businessHours = $this->businessHoursBlock($context);
 
         $voiceBlock = $this->voiceBlock($context);
 
@@ -139,7 +145,7 @@ PROMPT;
             . "  le client sache que c'est à lui de parler.\n\n";
     }
 
-    private function businessHoursBlock(): string
+    private function businessHoursBlock(ToolContext $context): string
     {
         $days = [
             1 => 'lundi',
@@ -160,10 +166,44 @@ PROMPT;
 
         $end = config('ai.business_hours.end');
 
-        return "# HORAIRES DU SERVICE CLIENT\n\n"
-            . "Les conseillers humains sont joignables : {$open}, de {$start} à {$end}.\n"
-            . "En dehors de ces heures, un transfert reste possible mais la réponse "
-            . "du conseiller interviendra à la réouverture.";
+        $organization = $context->organization;
+
+        $isOpen = $this->hours->isOpen($organization);
+
+        $reachable = $this->hours->hasReachableAgent($organization);
+
+        $block = "# DISPONIBILITÉ DES CONSEILLERS\n\n"
+            . "Horaires : {$open}, de {$start} à {$end}.\n\n";
+
+        /*
+         * Le point décisif : l'IA ne doit jamais annoncer une mise en
+         * relation si personne ne peut décrocher. Un client à qui on
+         * promet un conseiller qui ne vient pas est plus mécontent
+         * qu'un client à qui on annonce franchement un rappel.
+         */
+        if ($reachable) {
+            return $block
+                . "MAINTENANT : le service est ouvert et un conseiller est "
+                . "libre. Si la demande le justifie, tu peux annoncer une "
+                . "mise en relation immédiate.";
+        }
+
+        $when = $this->hours->nextOpeningInWords($organization);
+
+        return $block
+            . ($isOpen
+                ? "MAINTENANT : le service est ouvert mais TOUS les conseillers "
+                    . "sont occupés.\n"
+                : "MAINTENANT : le service est FERMÉ.\n")
+            . "\n"
+            . "Aucune mise en relation n'est possible dans l'immédiat.\n"
+            . "Tu es donc seul face au client :\n"
+            . "- traite toi-même tout ce que tu peux, comme d'habitude ;\n"
+            . "- si la demande dépasse tes moyens, ne dis JAMAIS « je vous "
+            . "passe un conseiller » ni « ne quittez pas » ;\n"
+            . "- rassemble plutôt les informations utiles, ouvre un ticket, "
+            . "et annonce un rappel {$when} ;\n"
+            . "- donne le numéro de ticket au client pour qu'il ait une trace.";
     }
 
     private function clientBlock(ToolContext $context): string

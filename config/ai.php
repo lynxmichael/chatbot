@@ -131,6 +131,62 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Plafonds de consommation
+    |--------------------------------------------------------------------------
+    |
+    | Chaque message traité par l'IA coûte un appel au modèle, et chaque
+    | appel téléphonique coûte des minutes chez l'opérateur. Sans plafond,
+    | une offre gratuite qui rencontre du succès devient une facture.
+    |
+    | Une valeur négative signifie « illimité », zéro signifie
+    | « interdit ». Les valeurs peuvent être redéfinies par organisation
+    | dans ai_settings.quota, par exemple pour un client payant.
+    |
+    | Le plafond atteint ne coupe pas le service : l'assistant se met en
+    | retrait et les demandes partent vers un agent humain.
+    |
+    */
+
+    'quota' => [
+
+        'plan' => env('AI_PLAN', 'free'),
+
+        /*
+         * Réponses de l'IA par mois.
+         */
+        'ai_messages' => (int) env('AI_QUOTA_MESSAGES', 100),
+
+        /*
+         * Appels vocaux par mois. Zéro par défaut : la voix est de loin
+         * le poste le plus coûteux, elle n'a pas sa place dans une offre
+         * gratuite.
+         */
+        'voice_calls' => (int) env('AI_QUOTA_VOICE_CALLS', 0),
+
+        /*
+         * Seuil d'alerte du responsable, en part du plafond.
+         */
+        'warn_at' => (float) env('AI_QUOTA_WARN_AT', 0.8),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Coûts unitaires
+    |--------------------------------------------------------------------------
+    |
+    | Sert uniquement à estimer la dépense du mois. À ajuster selon le
+    | modèle employé et le tarif de l'opérateur téléphonique.
+    |
+    */
+
+    'pricing' => [
+        'input_per_million' => (float) env('AI_PRICE_INPUT', 3.00),
+        'output_per_million' => (float) env('AI_PRICE_OUTPUT', 15.00),
+        'voice_per_minute' => (float) env('AI_PRICE_VOICE_MINUTE', 0.02),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Canal téléphonique
     |--------------------------------------------------------------------------
     |

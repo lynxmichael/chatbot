@@ -261,15 +261,15 @@ const statusClass = (status) => {
             "bg-emerald-100 text-emerald-700",
 
         inactive:
-            "bg-gray-100 text-gray-700",
+            "bg-canvas-sunken text-night-600",
 
         blocked:
-            "bg-red-100 text-red-700",
+            "bg-rose-100 text-rose-700",
     };
 
     return (
         classes[status] ??
-        "bg-gray-100 text-gray-700"
+        "bg-canvas-sunken text-night-600"
     );
 };
 
@@ -300,19 +300,19 @@ const conversationCount = (client) => {
             >
                 <div>
                     <h2
-                        class="text-xl font-semibold leading-tight text-gray-800"
+                        class="text-xl font-semibold leading-tight text-night-800"
                     >
                         Clients
                     </h2>
 
-                    <p class="mt-1 text-sm text-gray-500">
+                    <p class="mt-1 text-sm text-night-400">
                         Gérez les clients et leur historique de conversations.
                     </p>
                 </div>
 
                 <Link
                     :href="route('clients.create')"
-                    class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+                    class="inline-flex items-center justify-center rounded-xl bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-600"
                 >
                     + Nouveau client
                 </Link>
@@ -339,7 +339,7 @@ const conversationCount = (client) => {
 
                 <div
                     v-if="errorMessage"
-                    class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700"
+                    class="mb-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-rose-700"
                 >
                     ⚠️ {{ errorMessage }}
                 </div>
@@ -355,25 +355,25 @@ const conversationCount = (client) => {
                     <!-- Total -->
 
                     <div
-                        class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100"
+                        class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-line"
                     >
                         <div
                             class="flex items-center justify-between"
                         >
                             <div>
-                                <p class="text-sm font-medium text-gray-500">
+                                <p class="text-sm font-medium text-night-400">
                                     Total clients
                                 </p>
 
                                 <p
-                                    class="mt-2 text-3xl font-bold text-gray-900"
+                                    class="mt-2 text-3xl font-bold text-night-900"
                                 >
                                     {{ totalClients }}
                                 </p>
                             </div>
 
                             <div
-                                class="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 text-xl"
+                                class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-xl"
                             >
                                 👥
                             </div>
@@ -383,13 +383,13 @@ const conversationCount = (client) => {
                     <!-- Aujourd'hui -->
 
                     <div
-                        class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100"
+                        class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-line"
                     >
                         <div
                             class="flex items-center justify-between"
                         >
                             <div>
-                                <p class="text-sm font-medium text-gray-500">
+                                <p class="text-sm font-medium text-night-400">
                                     Nouveaux aujourd’hui
                                 </p>
 
@@ -411,13 +411,13 @@ const conversationCount = (client) => {
                     <!-- Avec conversations -->
 
                     <div
-                        class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100"
+                        class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-line"
                     >
                         <div
                             class="flex items-center justify-between"
                         >
                             <div>
-                                <p class="text-sm font-medium text-gray-500">
+                                <p class="text-sm font-medium text-night-400">
                                     Avec conversations
                                 </p>
 
@@ -439,13 +439,13 @@ const conversationCount = (client) => {
                     <!-- Sans conversations -->
 
                     <div
-                        class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100"
+                        class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-line"
                     >
                         <div
                             class="flex items-center justify-between"
                         >
                             <div>
-                                <p class="text-sm font-medium text-gray-500">
+                                <p class="text-sm font-medium text-night-400">
                                     Sans conversations
                                 </p>
 
@@ -470,7 +470,7 @@ const conversationCount = (client) => {
                 ======================================================= -->
 
                 <div
-                    class="mb-6 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100"
+                    class="mb-6 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-line"
                 >
                     <div
                         class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
@@ -478,14 +478,14 @@ const conversationCount = (client) => {
                         <div class="w-full">
                             <label
                                 for="search"
-                                class="mb-2 block text-sm font-medium text-gray-700"
+                                class="mb-2 block text-sm font-medium text-night-600"
                             >
                                 Rechercher un client
                             </label>
 
                             <div class="relative">
                                 <span
-                                    class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400"
+                                    class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-night-300"
                                 >
                                     🔎
                                 </span>
@@ -495,7 +495,7 @@ const conversationCount = (client) => {
                                     v-model="search"
                                     type="text"
                                     placeholder="Nom, téléphone, email ou entreprise..."
-                                    class="w-full rounded-xl border-gray-300 py-3 pl-11 pr-4 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    class="w-full rounded-xl border-line-strong py-3 pl-11 pr-4 shadow-sm focus:border-brand-400 focus:ring-brand-400"
                                 />
                             </div>
                         </div>
@@ -507,10 +507,10 @@ const conversationCount = (client) => {
                         >
                             <span
                                 v-if="refreshing"
-                                class="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-4 py-2 text-xs font-medium text-indigo-700"
+                                class="inline-flex items-center gap-2 rounded-full bg-brand-50 px-4 py-2 text-xs font-medium text-brand-700"
                             >
                                 <span
-                                    class="h-2 w-2 animate-pulse rounded-full bg-indigo-500"
+                                    class="h-2 w-2 animate-pulse rounded-full bg-brand-500"
                                 ></span>
 
                                 Actualisation...
@@ -535,28 +535,28 @@ const conversationCount = (client) => {
                 ======================================================= -->
 
                 <div
-                    class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100"
+                    class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-line"
                 >
 
                     <!-- Entête -->
 
                     <div
-                        class="flex flex-col gap-3 border-b border-gray-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between"
+                        class="flex flex-col gap-3 border-b border-line px-6 py-5 sm:flex-row sm:items-center sm:justify-between"
                     >
                         <div>
                             <h2
-                                class="text-lg font-bold text-gray-900"
+                                class="text-lg font-bold text-night-900"
                             >
                                 Liste des clients
                             </h2>
 
-                            <p class="mt-1 text-sm text-gray-500">
+                            <p class="mt-1 text-sm text-night-400">
                                 Vos clients et leur activité récente.
                             </p>
                         </div>
 
                         <span
-                            class="rounded-full bg-indigo-100 px-3 py-1 text-sm font-semibold text-indigo-700"
+                            class="rounded-full bg-brand-100 px-3 py-1 text-sm font-semibold text-brand-700"
                         >
                             {{
                                 clients.total ??
@@ -572,48 +572,48 @@ const conversationCount = (client) => {
 
                     <div class="hidden overflow-x-auto lg:block">
                         <table
-                            class="min-w-full divide-y divide-gray-200"
+                            class="min-w-full divide-y divide-line"
                         >
-                            <thead class="bg-gray-50">
+                            <thead class="bg-canvas-sunken">
                                 <tr>
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                                        class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-night-400"
                                     >
                                         Client
                                     </th>
 
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                                        class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-night-400"
                                     >
                                         Téléphone
                                     </th>
 
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                                        class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-night-400"
                                     >
                                         Email
                                     </th>
 
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                                        class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-night-400"
                                     >
                                         Entreprise
                                     </th>
 
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                                        class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-night-400"
                                     >
                                         Conversations
                                     </th>
 
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                                        class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-night-400"
                                     >
                                         Statut
                                     </th>
 
                                     <th
-                                        class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500"
+                                        class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-night-400"
                                     >
                                         Actions
                                     </th>
@@ -621,7 +621,7 @@ const conversationCount = (client) => {
                             </thead>
 
                             <tbody
-                                class="divide-y divide-gray-200 bg-white"
+                                class="divide-y divide-line bg-white"
                             >
                                 <!-- Aucun client -->
 
@@ -637,13 +637,13 @@ const conversationCount = (client) => {
                                         </div>
 
                                         <h3
-                                            class="mt-4 text-lg font-semibold text-gray-900"
+                                            class="mt-4 text-lg font-semibold text-night-900"
                                         >
                                             Aucun client trouvé
                                         </h3>
 
                                         <p
-                                            class="mt-2 text-sm text-gray-500"
+                                            class="mt-2 text-sm text-night-400"
                                         >
                                             Modifiez votre recherche ou
                                             créez un nouveau client.
@@ -651,7 +651,7 @@ const conversationCount = (client) => {
 
                                         <Link
                                             :href="route('clients.create')"
-                                            class="mt-5 inline-flex rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
+                                            class="mt-5 inline-flex rounded-xl bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600"
                                         >
                                             + Ajouter un client
                                         </Link>
@@ -663,7 +663,7 @@ const conversationCount = (client) => {
                                 <tr
                                     v-for="client in clients.data"
                                     :key="client.id"
-                                    class="transition hover:bg-gray-50"
+                                    class="transition hover:bg-canvas-sunken"
                                 >
                                     <!-- CLIENT -->
 
@@ -672,7 +672,7 @@ const conversationCount = (client) => {
                                             class="flex items-center gap-3"
                                         >
                                             <div
-                                                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-indigo-100 font-bold text-indigo-700"
+                                                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-100 font-bold text-brand-700"
                                             >
                                                 {{
                                                     getInitial(client)
@@ -681,7 +681,7 @@ const conversationCount = (client) => {
 
                                             <div class="min-w-0">
                                                 <div
-                                                    class="font-semibold text-gray-900"
+                                                    class="font-semibold text-night-900"
                                                 >
                                                     {{
                                                         getFullName(
@@ -691,7 +691,7 @@ const conversationCount = (client) => {
                                                 </div>
 
                                                 <div
-                                                    class="mt-1 text-xs text-gray-400"
+                                                    class="mt-1 text-xs text-night-300"
                                                 >
                                                     ID #{{ client.id }}
                                                 </div>
@@ -702,7 +702,7 @@ const conversationCount = (client) => {
                                     <!-- TELEPHONE -->
 
                                     <td
-                                        class="whitespace-nowrap px-6 py-4 text-sm text-gray-600"
+                                        class="whitespace-nowrap px-6 py-4 text-sm text-night-500"
                                     >
                                         {{ client.phone || "—" }}
                                     </td>
@@ -710,7 +710,7 @@ const conversationCount = (client) => {
                                     <!-- EMAIL -->
 
                                     <td
-                                        class="px-6 py-4 text-sm text-gray-600"
+                                        class="px-6 py-4 text-sm text-night-500"
                                     >
                                         {{ client.email || "—" }}
                                     </td>
@@ -718,7 +718,7 @@ const conversationCount = (client) => {
                                     <!-- ENTREPRISE -->
 
                                     <td
-                                        class="px-6 py-4 text-sm text-gray-600"
+                                        class="px-6 py-4 text-sm text-night-500"
                                     >
                                         {{ client.company || "—" }}
                                     </td>
@@ -776,7 +776,7 @@ const conversationCount = (client) => {
                                                         client.id
                                                     )
                                                 "
-                                                class="font-medium text-indigo-600 transition hover:text-indigo-900"
+                                                class="font-medium text-brand-600 transition hover:text-brand-900"
                                             >
                                                 Voir
                                             </Link>
@@ -801,7 +801,7 @@ const conversationCount = (client) => {
                                                         client
                                                     )
                                                 "
-                                                class="font-medium text-red-600 transition hover:text-red-900 disabled:cursor-not-allowed disabled:opacity-50"
+                                                class="font-medium text-rose-600 transition hover:text-rose-900 disabled:cursor-not-allowed disabled:opacity-50"
                                             >
                                                 Supprimer
                                             </button>
@@ -817,7 +817,7 @@ const conversationCount = (client) => {
                     =================================================== -->
 
                     <div
-                        class="divide-y divide-gray-100 lg:hidden"
+                        class="divide-y divide-line lg:hidden"
                     >
                         <div
                             v-if="!clients.data?.length"
@@ -828,13 +828,13 @@ const conversationCount = (client) => {
                             </div>
 
                             <h3
-                                class="mt-4 text-lg font-semibold text-gray-900"
+                                class="mt-4 text-lg font-semibold text-night-900"
                             >
                                 Aucun client trouvé
                             </h3>
 
                             <p
-                                class="mt-2 text-sm text-gray-500"
+                                class="mt-2 text-sm text-night-400"
                             >
                                 Modifiez votre recherche ou créez
                                 un nouveau client.
@@ -842,7 +842,7 @@ const conversationCount = (client) => {
 
                             <Link
                                 :href="route('clients.create')"
-                                class="mt-5 inline-flex rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white"
+                                class="mt-5 inline-flex rounded-xl bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white"
                             >
                                 + Ajouter un client
                             </Link>
@@ -860,7 +860,7 @@ const conversationCount = (client) => {
                             >
                                 <div class="flex min-w-0 items-center gap-3">
                                     <div
-                                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-indigo-100 font-bold text-indigo-700"
+                                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-100 font-bold text-brand-700"
                                     >
                                         {{ getInitial(client) }}
                                     </div>
@@ -873,7 +873,7 @@ const conversationCount = (client) => {
                                                     client.id
                                                 )
                                             "
-                                            class="font-semibold text-gray-900 hover:text-indigo-600"
+                                            class="font-semibold text-night-900 hover:text-brand-600"
                                         >
                                             {{
                                                 getFullName(
@@ -883,7 +883,7 @@ const conversationCount = (client) => {
                                         </Link>
 
                                         <p
-                                            class="mt-1 truncate text-xs text-gray-500"
+                                            class="mt-1 truncate text-xs text-night-400"
                                         >
                                             {{
                                                 client.email ??
@@ -915,16 +915,16 @@ const conversationCount = (client) => {
                                 class="mt-4 grid grid-cols-2 gap-3"
                             >
                                 <div
-                                    class="rounded-xl bg-gray-50 p-3"
+                                    class="rounded-xl bg-canvas-sunken p-3"
                                 >
                                     <p
-                                        class="text-xs text-gray-500"
+                                        class="text-xs text-night-400"
                                     >
                                         Téléphone
                                     </p>
 
                                     <p
-                                        class="mt-1 truncate text-sm font-medium text-gray-800"
+                                        class="mt-1 truncate text-sm font-medium text-night-800"
                                     >
                                         {{
                                             client.phone ||
@@ -934,16 +934,16 @@ const conversationCount = (client) => {
                                 </div>
 
                                 <div
-                                    class="rounded-xl bg-gray-50 p-3"
+                                    class="rounded-xl bg-canvas-sunken p-3"
                                 >
                                     <p
-                                        class="text-xs text-gray-500"
+                                        class="text-xs text-night-400"
                                     >
                                         Entreprise
                                     </p>
 
                                     <p
-                                        class="mt-1 truncate text-sm font-medium text-gray-800"
+                                        class="mt-1 truncate text-sm font-medium text-night-800"
                                     >
                                         {{
                                             client.company ||
@@ -973,16 +973,16 @@ const conversationCount = (client) => {
                                 </div>
 
                                 <div
-                                    class="rounded-xl bg-gray-50 p-3"
+                                    class="rounded-xl bg-canvas-sunken p-3"
                                 >
                                     <p
-                                        class="text-xs text-gray-500"
+                                        class="text-xs text-night-400"
                                     >
                                         Identifiant
                                     </p>
 
                                     <p
-                                        class="mt-1 text-sm font-bold text-gray-800"
+                                        class="mt-1 text-sm font-bold text-night-800"
                                     >
                                         #{{ client.id }}
                                     </p>
@@ -1001,7 +1001,7 @@ const conversationCount = (client) => {
                                             client.id
                                         )
                                     "
-                                    class="rounded-lg bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 transition hover:bg-indigo-100"
+                                    class="rounded-lg bg-brand-50 px-4 py-2 text-sm font-medium text-brand-700 transition hover:bg-brand-100"
                                 >
                                     Voir
                                 </Link>
@@ -1026,7 +1026,7 @@ const conversationCount = (client) => {
                                             client
                                         )
                                     "
-                                    class="rounded-lg bg-red-50 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                    class="rounded-lg bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     Supprimer
                                 </button>
@@ -1040,7 +1040,7 @@ const conversationCount = (client) => {
 
                     <div
                         v-if="clients.links?.length > 3"
-                        class="flex flex-wrap items-center justify-center gap-2 border-t border-gray-200 px-6 py-5"
+                        class="flex flex-wrap items-center justify-center gap-2 border-t border-line px-6 py-5"
                     >
                         <template
                             v-for="(
@@ -1056,8 +1056,8 @@ const conversationCount = (client) => {
                                 class="rounded-lg border px-3 py-2 text-sm transition"
                                 :class="
                                     link.active
-                                        ? 'border-indigo-600 bg-indigo-600 text-white'
-                                        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                                        ? 'border-brand-500 bg-brand-500 text-white'
+                                        : 'border-line-strong bg-white text-night-600 hover:bg-canvas-sunken'
                                 "
                             >
                                 <span
@@ -1067,7 +1067,7 @@ const conversationCount = (client) => {
 
                             <span
                                 v-else
-                                class="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-400"
+                                class="rounded-lg border border-line px-3 py-2 text-sm text-night-300"
                             >
                                 <span
                                     v-html="link.label"
@@ -1082,26 +1082,26 @@ const conversationCount = (client) => {
                 ======================================================= -->
 
                 <div
-                    class="mt-6 rounded-2xl border border-indigo-100 bg-indigo-50 p-5"
+                    class="mt-6 rounded-2xl border border-brand-100 bg-brand-50 p-5"
                 >
                     <div
                         class="flex items-start gap-4"
                     >
                         <div
-                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100"
+                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-100"
                         >
                             ℹ️
                         </div>
 
                         <div>
                             <h3
-                                class="font-semibold text-indigo-900"
+                                class="font-semibold text-brand-900"
                             >
                                 Gestion des clients
                             </h3>
 
                             <p
-                                class="mt-1 text-sm leading-6 text-indigo-800"
+                                class="mt-1 text-sm leading-6 text-brand-800"
                             >
                                 Les informations clients sont limitées
                                 à votre organisation. Consultez la fiche

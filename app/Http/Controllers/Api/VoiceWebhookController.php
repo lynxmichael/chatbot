@@ -11,6 +11,7 @@ use App\Models\Organization;
 use App\Services\AI\AgentRunner;
 use App\Services\AI\Autopilot\AutopilotPolicy;
 use App\Services\AI\Tools\ToolContext;
+use App\Services\AI\Usage\UsageMeter;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
@@ -43,8 +44,11 @@ class VoiceWebhookController extends Controller
     /**
      * Appel entrant.
      */
-    public function incoming(Request $request, string $token): Response
-    {
+    public function incoming(
+        Request $request,
+        string $token,
+        UsageMeter $usage
+    ): Response {
         $organization = $this->organizationFromToken($token);
 
         $from = $this->normalizePhone($request->input('From'));
@@ -83,10 +87,17 @@ class VoiceWebhookController extends Controller
         $policy = AutopilotPolicy::forOrganization($organization);
 
         /*
-         * Autopilot coupé : on ne fait pas semblant, on bascule
-         * immédiatement vers un humain.
+         * Plafond vocal atteint, ou Autopilot coupé : on ne fait pas
+         * semblant, on bascule immédiatement vers un humain.
+         *
+         * La vérification précède le comptage : un appel refusé ne doit
+         * pas consommer le plafond.
          */
-        if ($policy->isDisabled() || $policy->isDraftOnly()) {
+        if (
+            $policy->isDisabled()
+            || $policy->isDraftOnly()
+            || !$usage->allows($organization, 'voice_calls')
+        ) {
             return $this->twiml(
                 $this->say(
                     "Bonjour, je vous mets en relation avec un conseiller."
@@ -94,6 +105,8 @@ class VoiceWebhookController extends Controller
                 . $this->dial($organization)
             );
         }
+
+        $usage->record($organization, ['voice_calls' => 1]);
 
         $greeting = $policy->persona()
             ? 'Bonjour, ' . $policy->persona() . '. Que puis-je faire pour vous ?'
@@ -144,7 +157,7 @@ class VoiceWebhookController extends Controller
                 return $this->transferToHuman(
                     $organization,
                     $conversation,
-                    "Je vous passe un conseiller."
+                    'Je vous passe un conseiller.'
                 );
             }
 
@@ -225,9 +238,23 @@ class VoiceWebhookController extends Controller
         $this->appendTranscript($organization, $request->input('CallSid'), 'ai', $reply);
 
         /*
-         * L'IA a décidé de passer la main : on annonce puis on transfère.
+         * L'IA a décidé de passer la main.
+         *
+         * Si personne ne peut décrocher — service fermé, ou tous les
+         * conseillers occupés — composer le numéro ferait sonner dans le
+         * vide puis raccrocherait au nez du client. On lui annonce le
+         * rappel à la place : l'outil d'escalade l'a déjà programmé.
          */
         if ($result->escalated) {
+            $deferred = $result->effects['deferred'] ?? false;
+
+            if ($deferred) {
+                return $this->twiml(
+                    $this->say($reply)
+                    . $this->say('Merci de votre appel. Au revoir.')
+                );
+            }
+
             return $this->twiml(
                 $this->say($reply)
                 . $this->say('Je vous mets en relation, ne quittez pas.')
@@ -248,8 +275,11 @@ class VoiceWebhookController extends Controller
     /**
      * Fin de l'appel.
      */
-    public function status(Request $request, string $token): Response
-    {
+    public function status(
+        Request $request,
+        string $token,
+        UsageMeter $usage
+    ): Response {
         $organization = $this->organizationFromToken($token);
 
         $call = Call::query()
@@ -258,8 +288,14 @@ class VoiceWebhookController extends Controller
             ->first();
 
         if ($call) {
+            $seconds = (int) $request->input('CallDuration', 0);
+
+            if ($seconds > 0) {
+                $usage->record($organization, ['voice_seconds' => $seconds]);
+            }
+
             $call->update([
-                'duration' => (int) $request->input('CallDuration', 0),
+                'duration' => $seconds,
                 'ended_at' => now(),
                 'status' => match ($request->input('CallStatus')) {
                     'completed' => 'answered',
@@ -297,6 +333,24 @@ class VoiceWebhookController extends Controller
             'status' => 'open',
             'ai_enabled' => false,
         ]);
+
+        /*
+         * Même règle qu'ailleurs : hors des heures ou sans conseiller
+         * libre, on annonce un rappel plutôt que de faire sonner dans
+         * le vide.
+         */
+        $hours = app(\App\Services\AI\Support\BusinessHours::class);
+
+        if (!$hours->hasReachableAgent($organization)) {
+            return $this->twiml(
+                $this->say(
+                    "Nos conseillers ne sont pas joignables pour le moment. "
+                    . "Votre demande est enregistrée, nous vous rappelons "
+                    . $hours->nextOpeningInWords($organization) . "."
+                )
+                . $this->say('Merci de votre appel. Au revoir.')
+            );
+        }
 
         return $this->twiml(
             $this->say($announcement) . $this->dial($organization)

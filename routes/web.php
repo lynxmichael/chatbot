@@ -4,6 +4,7 @@ use App\Http\Controllers\AgentController;
 use App\Http\Controllers\AiController;
 use App\Http\Controllers\AutopilotController;
 use App\Http\Controllers\CallDeskController;
+use App\Http\Controllers\KnowledgeBaseController;
 use App\Http\Controllers\CallController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ConversationController;
@@ -118,6 +119,46 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/conversations/{conversation}', [ConversationController::class, 'show'])
         ->name('conversations.show');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Base de connaissances
+    |--------------------------------------------------------------------------
+    |
+    | C'est la matière première de l'assistant : sans fiches, il ne sait
+    | rien répondre. Réservé au responsable.
+    |
+    */
+
+    Route::prefix('knowledge')->name('knowledge.')->group(function () {
+
+        Route::get('/', [KnowledgeBaseController::class, 'index'])
+            ->name('index');
+
+        Route::get('/import', [KnowledgeBaseController::class, 'importForm'])
+            ->name('import');
+
+        Route::post('/import', [KnowledgeBaseController::class, 'import'])
+            ->name('import.store');
+
+        Route::get('/create', [KnowledgeBaseController::class, 'create'])
+            ->name('create');
+
+        Route::post('/', [KnowledgeBaseController::class, 'store'])
+            ->name('store');
+
+        Route::get('/{knowledge}/edit', [KnowledgeBaseController::class, 'edit'])
+            ->name('edit');
+
+        Route::put('/{knowledge}', [KnowledgeBaseController::class, 'update'])
+            ->name('update');
+
+        Route::patch('/{knowledge}/toggle', [KnowledgeBaseController::class, 'toggle'])
+            ->name('toggle');
+
+        Route::delete('/{knowledge}', [KnowledgeBaseController::class, 'destroy'])
+            ->name('destroy');
+    });
 
     /*
     |--------------------------------------------------------------------------

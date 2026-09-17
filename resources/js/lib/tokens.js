@@ -47,7 +47,9 @@ export const statusTokens = {
     closed: { label: 'Fermé', tone: 'slate' },
 
     /* Statuts d'appel */
-    answered: { label: 'Répondu', tone: 'emerald' },
+    ringing: { label: 'Sonne', tone: 'amber' },
+    answered: { label: 'En ligne', tone: 'emerald' },
+    completed: { label: 'Terminé', tone: 'emerald' },
     missed: { label: 'Manqué', tone: 'rose' },
     busy: { label: 'Occupé', tone: 'amber' },
     failed: { label: 'Échec', tone: 'rose' },

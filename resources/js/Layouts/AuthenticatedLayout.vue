@@ -64,6 +64,13 @@ const baseNavigation = [
         icon: "shield",
     },
     {
+        name: "Connaissances",
+        route: "knowledge.index",
+        pattern: "knowledge.*",
+        icon: "book",
+        ownerOnly: true,
+    },
+    {
         name: "Autopilot",
         route: "autopilot.index",
         pattern: "autopilot.*",
@@ -268,6 +275,7 @@ const icons = {
     ticket: "M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4a2 2 0 0 0 0-4V6Z",
     users: "M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM2 20a7 7 0 0 1 14 0H2Zm15 0a8.9 8.9 0 0 0-1.7-5A5.5 5.5 0 0 1 22 20h-5Z",
     shield: "M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z",
+    book: "M4 4.5A2.5 2.5 0 0 1 6.5 2H20v15H6.5A2.5 2.5 0 0 0 4 19.5V4.5ZM6.5 17H20v3H6.5A1.5 1.5 0 0 1 6.5 17Z",
     spark: "M12 2l2.2 5.8L20 10l-5.8 2.2L12 18l-2.2-5.8L4 10l5.8-2.2L12 2Zm6.5 11 1.1 2.9L22.5 17l-2.9 1.1L18.5 21l-1.1-2.9L14.5 17l2.9-1.1L18.5 13Z",
 };
 </script>

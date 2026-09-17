@@ -2,255 +2,356 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreKnowledgeBaseRequest;
-use App\Http\Requests\UpdateKnowledgeBaseRequest;
+use App\Models\AiAction;
 use App\Models\KnowledgeBase;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
-use Inertia\Response;
 
+/**
+ * Base de connaissances.
+ *
+ * C'est elle qui détermine la qualité des réponses de l'IA, bien plus
+ * que le modèle employé. Une entreprise dont la base est vide a un
+ * assistant qui ne sait rien : l'enjeu de cet écran est donc qu'un
+ * responsable puisse la remplir en minutes, pas en heures.
+ */
 class KnowledgeBaseController extends Controller
 {
-    /**
-     * Vérifie que l'entrée appartient bien
-     * à l'organisation de l'utilisateur connecté.
-     */
-    private function authorizeKnowledgeBase(
-        Request $request,
-        KnowledgeBase $knowledgeBase
-    ): void {
-        abort_unless(
-            $knowledgeBase->organization_id ===
-                $request->user()->organization_id,
-            403
-        );
-    }
-
-    /**
-     * Liste des entrées de la base de connaissances.
-     */
-    public function index(Request $request): Response
+    public function index(Request $request)
     {
-        $user = $request->user();
+        $user = $this->authorizeOwner($request);
 
         $entries = KnowledgeBase::query()
-            ->where(
-                'organization_id',
-                $user->organization_id
-            )
+            ->where('organization_id', $user->organization_id)
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $search = trim($request->string('search')->toString());
 
-            ->when(
-                $request->filled('search'),
-                function ($query) use ($request) {
-                    $search = trim($request->input('search'));
-
-                    $query->where(function ($query) use ($search) {
-                        $query
-                            ->where('title', 'like', "%{$search}%")
-                            ->orWhere('category', 'like', "%{$search}%")
-                            ->orWhere('content', 'like', "%{$search}%");
-                    });
-                }
-            )
-
+                $query->where(function ($inner) use ($search) {
+                    $inner->where('title', 'like', "%{$search}%")
+                        ->orWhere('content', 'like', "%{$search}%");
+                });
+            })
             ->when(
                 $request->filled('category'),
-                function ($query) use ($request) {
-                    $query->where(
-                        'category',
-                        $request->input('category')
-                    );
-                }
+                fn ($query) => $query->where('category', $request->input('category'))
             )
-
-            ->orderBy('category')
-            ->orderBy('title')
+            ->when(
+                $request->input('status') === 'inactive',
+                fn ($query) => $query->where('is_active', false)
+            )
+            ->when(
+                $request->input('status') === 'active',
+                fn ($query) => $query->where('is_active', true)
+            )
+            ->orderByDesc('updated_at')
             ->paginate(15)
-            ->withQueryString();
-
-        /*
-        |--------------------------------------------------------------------------
-        | Statistiques
-        |--------------------------------------------------------------------------
-        */
-
-        $entriesQuery = KnowledgeBase::query()
-            ->where(
-                'organization_id',
-                $user->organization_id
-            );
-
-        $totalEntries = (clone $entriesQuery)->count();
-
-        $activeEntries = (clone $entriesQuery)
-            ->where('is_active', true)
-            ->count();
-
-        $inactiveEntries = $totalEntries - $activeEntries;
-
-        $categoriesCount = (clone $entriesQuery)
-            ->whereNotNull('category')
-            ->distinct()
-            ->count('category');
-
-        /*
-        |--------------------------------------------------------------------------
-        | Liste des catégories utilisées (pour le filtre)
-        |--------------------------------------------------------------------------
-        */
-
-        $categories = KnowledgeBase::query()
-            ->where(
-                'organization_id',
-                $user->organization_id
-            )
-            ->whereNotNull('category')
-            ->distinct()
-            ->orderBy('category')
-            ->pluck('category');
+            ->withQueryString()
+            ->through(fn (KnowledgeBase $entry) => [
+                'id' => $entry->id,
+                'title' => $entry->title,
+                'category' => $entry->category,
+                'excerpt' => Str::limit(strip_tags($entry->content), 180),
+                'length' => mb_strlen($entry->content),
+                'is_active' => (bool) $entry->is_active,
+                'updated_at' => optional($entry->updated_at)->toDateTimeString(),
+            ]);
 
         return Inertia::render('KnowledgeBase/Index', [
             'entries' => $entries,
-
-            'categories' => $categories,
-
-            'statistics' => [
-                'total' => $totalEntries,
-                'active' => $activeEntries,
-                'inactive' => $inactiveEntries,
-                'categories' => $categoriesCount,
-            ],
+            'categories' => config('ai.categories', []),
 
             'filters' => [
-                'search' => $request->input('search'),
-                'category' => $request->input('category'),
+                'search' => $request->input('search', ''),
+                'category' => $request->input('category', ''),
+                'status' => $request->input('status', ''),
             ],
+
+            'statistics' => [
+                'total' => KnowledgeBase::query()
+                    ->where('organization_id', $user->organization_id)
+                    ->count(),
+
+                'active' => KnowledgeBase::query()
+                    ->where('organization_id', $user->organization_id)
+                    ->where('is_active', true)
+                    ->count(),
+            ],
+
+            'gaps' => $this->gaps($user->organization_id),
         ]);
     }
 
     /**
-     * Formulaire de création.
-     */
-    public function create(): Response
-    {
-        return Inertia::render('KnowledgeBase/Create');
-    }
-
-    /**
-     * Enregistrer une entrée.
-     */
-    public function store(
-        StoreKnowledgeBaseRequest $request
-    ): RedirectResponse {
-        $user = $request->user();
-
-        $data = $request->validated();
-
-        $data['is_active'] = $request->boolean('is_active', true);
-
-        $user->organization
-            ->knowledgeBases()
-            ->create($data);
-
-        return redirect()
-            ->route('knowledge-base.index')
-            ->with(
-                'success',
-                'Entrée ajoutée à la base de connaissances.'
-            );
-    }
-
-    /**
-     * Formulaire de modification.
-     */
-    public function edit(
-        Request $request,
-        KnowledgeBase $knowledgeBase
-    ): Response {
-        $this->authorizeKnowledgeBase(
-            $request,
-            $knowledgeBase
-        );
-
-        return Inertia::render('KnowledgeBase/Edit', [
-            'entry' => $knowledgeBase,
-        ]);
-    }
-
-    /**
-     * Modifier une entrée.
-     */
-    public function update(
-        UpdateKnowledgeBaseRequest $request,
-        KnowledgeBase $knowledgeBase
-    ): RedirectResponse {
-        $this->authorizeKnowledgeBase(
-            $request,
-            $knowledgeBase
-        );
-
-        $data = $request->validated();
-
-        $data['is_active'] = $request->boolean('is_active', true);
-
-        $knowledgeBase->update($data);
-
-        return redirect()
-            ->route('knowledge-base.index')
-            ->with(
-                'success',
-                'Entrée modifiée avec succès.'
-            );
-    }
-
-    /**
-     * Supprimer une entrée.
-     */
-    public function destroy(
-        Request $request,
-        KnowledgeBase $knowledgeBase
-    ): RedirectResponse {
-        $this->authorizeKnowledgeBase(
-            $request,
-            $knowledgeBase
-        );
-
-        $knowledgeBase->delete();
-
-        return redirect()
-            ->route('knowledge-base.index')
-            ->with(
-                'success',
-                'Entrée supprimée avec succès.'
-            );
-    }
-
-    /**
-     * Activer ou désactiver une entrée.
+     * Questions auxquelles l'IA n'a pas su répondre.
      *
-     * Une entrée désactivée n'est plus jamais transmise
-     * à l'IA : elle reste visible dans l'administration
-     * mais n'influence plus les réponses données aux clients.
+     * Chaque recherche infructueuse est déjà journalisée dans ai_actions.
+     * Les regrouper transforme un échec en liste de fiches à écrire :
+     * c'est la boucle qui fait progresser la base toute seule.
      */
-    public function toggle(
-        Request $request,
-        KnowledgeBase $knowledgeBase
-    ): RedirectResponse {
-        $this->authorizeKnowledgeBase(
-            $request,
-            $knowledgeBase
-        );
+    private function gaps(int $organizationId): array
+    {
+        return AiAction::query()
+            ->where('organization_id', $organizationId)
+            ->where('tool', 'search_knowledge')
+            ->where('status', 'executed')
+            ->where('created_at', '>=', now()->subDays(30))
+            ->whereRaw("JSON_EXTRACT(output, '$.found') = false")
+            ->selectRaw(
+                "JSON_UNQUOTE(JSON_EXTRACT(input, '$.query')) as question,
+                 COUNT(*) as occurrences,
+                 MAX(created_at) as last_seen"
+            )
+            ->groupBy('question')
+            ->havingRaw('question IS NOT NULL')
+            ->orderByDesc('occurrences')
+            ->limit(12)
+            ->get()
+            ->map(fn ($row) => [
+                'question' => $row->question,
+                'occurrences' => (int) $row->occurrences,
+                'last_seen' => $row->last_seen,
+            ])
+            ->all();
+    }
 
-        $knowledgeBase->update([
-            'is_active' => !$knowledgeBase->is_active,
+    public function create(Request $request)
+    {
+        $this->authorizeOwner($request);
+
+        return Inertia::render('KnowledgeBase/Form', [
+            'entry' => null,
+            'categories' => config('ai.categories', []),
+
+            /*
+             * Pré-remplissage depuis une question restée sans réponse.
+             */
+            'suggestedTitle' => $request->input('question', ''),
         ]);
+    }
+
+    public function store(Request $request)
+    {
+        $user = $this->authorizeOwner($request);
+
+        $validated = $this->validateEntry($request);
+
+        KnowledgeBase::create([
+            'organization_id' => $user->organization_id,
+            'title' => $validated['title'],
+            'category' => $validated['category'] ?? null,
+            'content' => $validated['content'],
+            'is_active' => $validated['is_active'],
+        ]);
+
+        return redirect()
+            ->route('knowledge.index')
+            ->with('success', 'Fiche ajoutée. L\'assistant peut déjà s\'en servir.');
+    }
+
+    public function edit(Request $request, KnowledgeBase $knowledge)
+    {
+        $this->authorizeOwner($request);
+
+        $this->authorizeEntry($request, $knowledge);
+
+        return Inertia::render('KnowledgeBase/Form', [
+            'entry' => [
+                'id' => $knowledge->id,
+                'title' => $knowledge->title,
+                'category' => $knowledge->category,
+                'content' => $knowledge->content,
+                'is_active' => (bool) $knowledge->is_active,
+            ],
+
+            'categories' => config('ai.categories', []),
+            'suggestedTitle' => '',
+        ]);
+    }
+
+    public function update(Request $request, KnowledgeBase $knowledge)
+    {
+        $this->authorizeOwner($request);
+
+        $this->authorizeEntry($request, $knowledge);
+
+        $validated = $this->validateEntry($request);
+
+        $knowledge->update([
+            'title' => $validated['title'],
+            'category' => $validated['category'] ?? null,
+            'content' => $validated['content'],
+            'is_active' => $validated['is_active'],
+        ]);
+
+        return redirect()
+            ->route('knowledge.index')
+            ->with('success', 'Fiche mise à jour.');
+    }
+
+    public function toggle(Request $request, KnowledgeBase $knowledge)
+    {
+        $this->authorizeOwner($request);
+
+        $this->authorizeEntry($request, $knowledge);
+
+        $knowledge->update(['is_active' => !$knowledge->is_active]);
 
         return back()->with(
             'success',
-            $knowledgeBase->is_active
-                ? 'Entrée activée avec succès.'
-                : 'Entrée désactivée avec succès.'
+            $knowledge->is_active
+                ? 'Fiche activée.'
+                : 'Fiche désactivée : l\'assistant ne s\'en servira plus.'
+        );
+    }
+
+    public function destroy(Request $request, KnowledgeBase $knowledge)
+    {
+        $this->authorizeOwner($request);
+
+        $this->authorizeEntry($request, $knowledge);
+
+        $knowledge->delete();
+
+        return back()->with('success', 'Fiche supprimée.');
+    }
+
+    /**
+     * Import en masse.
+     */
+    public function importForm(Request $request)
+    {
+        $this->authorizeOwner($request);
+
+        return Inertia::render('KnowledgeBase/Import', [
+            'categories' => config('ai.categories', []),
+        ]);
+    }
+
+    /**
+     * Découpe un texte collé en fiches.
+     *
+     * Format attendu : un bloc par fiche, séparé par une ligne vide.
+     * La première ligne du bloc devient le titre, le reste le contenu.
+     * C'est exactement la forme d'une FAQ copiée depuis un document,
+     * ce qui évite toute ressaisie.
+     */
+    public function import(Request $request)
+    {
+        $user = $this->authorizeOwner($request);
+
+        $validated = $request->validate([
+            'content' => ['required', 'string', 'max:200000'],
+
+            'category' => [
+                'nullable',
+                Rule::in(config('ai.categories', [])),
+            ],
+
+            'replace_existing' => ['required', 'boolean'],
+        ]);
+
+        $blocks = preg_split(
+            '/\R\s*\R/u',
+            trim($validated['content'])
+        );
+
+        $entries = [];
+
+        foreach ($blocks as $block) {
+            $lines = preg_split('/\R/u', trim($block));
+
+            $lines = array_values(array_filter(
+                array_map('trim', $lines),
+                fn ($line) => $line !== ''
+            ));
+
+            if (count($lines) < 2) {
+                /*
+                 * Un bloc d'une seule ligne n'est pas une fiche :
+                 * il n'a pas de contenu à retourner à l'IA.
+                 */
+                continue;
+            }
+
+            $title = Str::limit(array_shift($lines), 250, '');
+
+            $entries[] = [
+                'organization_id' => $user->organization_id,
+                'title' => $title,
+                'category' => $validated['category'] ?? null,
+                'content' => implode("\n", $lines),
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+
+        if (empty($entries)) {
+            return back()->with(
+                'error',
+                'Aucune fiche reconnue. Chaque fiche doit comporter un titre '
+                . 'sur la première ligne, puis son contenu, et être séparée '
+                . 'de la suivante par une ligne vide.'
+            );
+        }
+
+        DB::transaction(function () use ($entries, $user, $validated) {
+            if ($validated['replace_existing']) {
+                KnowledgeBase::query()
+                    ->where('organization_id', $user->organization_id)
+                    ->delete();
+            }
+
+            foreach (array_chunk($entries, 100) as $chunk) {
+                KnowledgeBase::insert($chunk);
+            }
+        });
+
+        return redirect()
+            ->route('knowledge.index')
+            ->with(
+                'success',
+                count($entries) . ' fiche(s) importée(s).'
+            );
+    }
+
+    /* ------------------------------------------------------------------
+     | Utilitaires
+     |------------------------------------------------------------------ */
+
+    private function validateEntry(Request $request): array
+    {
+        return $request->validate([
+            'title' => ['required', 'string', 'max:250'],
+
+            'category' => [
+                'nullable',
+                Rule::in(config('ai.categories', [])),
+            ],
+
+            'content' => ['required', 'string', 'max:50000'],
+
+            'is_active' => ['required', 'boolean'],
+        ]);
+    }
+
+    private function authorizeOwner(Request $request)
+    {
+        $user = $request->user();
+
+        abort_unless($user->role === 'owner', 403);
+
+        return $user;
+    }
+
+    private function authorizeEntry(Request $request, KnowledgeBase $entry): void
+    {
+        abort_unless(
+            $entry->organization_id === $request->user()->organization_id,
+            403
         );
     }
 }

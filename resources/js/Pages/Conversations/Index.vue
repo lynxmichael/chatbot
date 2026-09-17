@@ -1,45 +1,18 @@
 <script setup>
-import {
-    computed,
-    ref,
-    onMounted,
-    onBeforeUnmount,
-} from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { Head, Link, router } from "@inertiajs/vue3";
 
-import {
-    Head,
-    Link,
-    router,
-    usePage,
-} from "@inertiajs/vue3";
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import PageHeader from "@/Components/UI/PageHeader.vue";
+import SurfaceCard from "@/Components/UI/SurfaceCard.vue";
+import FlashMessages from "@/Components/UI/FlashMessages.vue";
+import EmptyState from "@/Components/UI/EmptyState.vue";
+import StateBadge from "@/Components/UI/StateBadge.vue";
 
-const page = usePage();
-
-/*
-|--------------------------------------------------------------------------
-| Conversations
-|--------------------------------------------------------------------------
-*/
-
-const conversations = computed(() => {
-    return (
-        page.props.conversations ?? {
-            data: [],
-            links: [],
-            meta: {},
-            total: 0,
-        }
-    );
-});
-
-/*
-|--------------------------------------------------------------------------
-| Agents
-|--------------------------------------------------------------------------
-*/
-
-const agents = computed(() => {
-    return page.props.agents ?? [];
+const props = defineProps({
+    conversations: { type: Object, required: true },
+    agents: { type: Array, default: () => [] },
+    filters: { type: Object, default: () => ({}) },
 });
 
 /*
@@ -48,32 +21,70 @@ const agents = computed(() => {
 |--------------------------------------------------------------------------
 */
 
-const filters = computed(() => {
-    return page.props.filters ?? {};
+const search = ref(props.filters.search ?? "");
+const status = ref(props.filters.status ?? "");
+const priority = ref(props.filters.priority ?? "");
+const aiEnabled = ref(props.filters.ai_enabled ?? "");
+const assignedTo = ref(props.filters.assigned_to ?? "");
+
+const applyFilters = () => {
+    router.get(
+        route("conversations.index"),
+        {
+            search: search.value || undefined,
+            status: status.value || undefined,
+            priority: priority.value || undefined,
+            ai_enabled: aiEnabled.value !== "" ? aiEnabled.value : undefined,
+            assigned_to: assignedTo.value || undefined,
+        },
+        { preserveState: true, preserveScroll: true, replace: true },
+    );
+};
+
+let searchTimer = null;
+
+watch(search, () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(applyFilters, 350);
 });
 
-const search = ref(filters.value.search ?? "");
+watch([status, priority, aiEnabled, assignedTo], applyFilters);
 
-const status = ref(filters.value.status ?? "");
+const resetFilters = () => {
+    search.value = "";
+    status.value = "";
+    priority.value = "";
+    aiEnabled.value = "";
+    assignedTo.value = "";
+};
 
-const priority = ref(filters.value.priority ?? "");
-
-const aiEnabled = ref(filters.value.ai_enabled ?? "");
-
-const assignedTo = ref(filters.value.assigned_to ?? "");
+const activeFilters = computed(
+    () =>
+        [
+            search.value,
+            status.value,
+            priority.value,
+            aiEnabled.value,
+            assignedTo.value,
+        ].filter((value) => value !== "" && value !== null && value !== undefined)
+            .length,
+);
 
 /*
 |--------------------------------------------------------------------------
-| Actualisation automatique
+| Actualisation
 |--------------------------------------------------------------------------
+|
+| Suspendue quand l'onglet est en arrière-plan.
+|
 */
-
-let refreshInterval = null;
 
 const refreshing = ref(false);
 
-const refreshConversations = () => {
-    if (refreshing.value) {
+let refreshInterval = null;
+
+const refresh = () => {
+    if (refreshing.value || document.hidden) {
         return;
     }
 
@@ -83,7 +94,6 @@ const refreshConversations = () => {
         only: ["conversations"],
         preserveState: true,
         preserveScroll: true,
-
         onFinish: () => {
             refreshing.value = false;
         },
@@ -91,808 +101,326 @@ const refreshConversations = () => {
 };
 
 onMounted(() => {
-    refreshInterval = setInterval(() => {
-        refreshConversations();
-    }, 5000);
+    refreshInterval = setInterval(refresh, 10000);
 });
 
 onBeforeUnmount(() => {
-    if (refreshInterval) {
-        clearInterval(refreshInterval);
-        refreshInterval = null;
-    }
+    clearInterval(refreshInterval);
+    clearTimeout(searchTimer);
 });
 
 /*
 |--------------------------------------------------------------------------
-| Appliquer les filtres
+| Présentation
 |--------------------------------------------------------------------------
 */
 
-const applyFilters = () => {
-    router.get(
-        route("conversations.index"),
-        {
-            search: search.value || undefined,
-            status: status.value || undefined,
-            priority: priority.value || undefined,
-            ai_enabled: aiEnabled.value || undefined,
-            assigned_to: assignedTo.value || undefined,
-        },
-        {
-            preserveState: true,
-            preserveScroll: true,
-            replace: true,
-        }
-    );
-};
+const clientName = (conversation) => {
+    const client = conversation.client;
 
-/*
-|--------------------------------------------------------------------------
-| Réinitialiser les filtres
-|--------------------------------------------------------------------------
-*/
-
-const resetFilters = () => {
-    search.value = "";
-    status.value = "";
-    priority.value = "";
-    aiEnabled.value = "";
-    assignedTo.value = "";
-
-    router.get(
-        route("conversations.index"),
-        {},
-        {
-            preserveState: false,
-            replace: true,
-        }
-    );
-};
-
-/*
-|--------------------------------------------------------------------------
-| Initiale client
-|--------------------------------------------------------------------------
-*/
-
-const getInitial = (name) => {
-    return name?.charAt(0)?.toUpperCase() ?? "?";
-};
-
-/*
-|--------------------------------------------------------------------------
-| Statut
-|--------------------------------------------------------------------------
-*/
-
-const statusLabel = (value) => {
-    const labels = {
-        open: "Ouverte",
-        pending: "En attente",
-        resolved: "Résolue",
-        closed: "Fermée",
-    };
-
-    return labels[value] ?? value;
-};
-
-const statusClass = (value) => {
-    const classes = {
-        open: "bg-green-100 text-green-700",
-        pending: "bg-yellow-100 text-yellow-700",
-        resolved: "bg-blue-100 text-blue-700",
-        closed: "bg-gray-100 text-gray-600",
-    };
-
-    return classes[value] ?? "bg-gray-100 text-gray-600";
-};
-
-/*
-|--------------------------------------------------------------------------
-| Priorité
-|--------------------------------------------------------------------------
-*/
-
-const priorityLabel = (value) => {
-    const labels = {
-        low: "Faible",
-        normal: "Normale",
-        high: "Élevée",
-        urgent: "Urgente",
-    };
-
-    return labels[value] ?? value;
-};
-
-const priorityClass = (value) => {
-    const classes = {
-        low: "bg-gray-100 text-gray-600",
-        normal: "bg-blue-100 text-blue-700",
-        high: "bg-orange-100 text-orange-700",
-        urgent: "bg-red-100 text-red-700",
-    };
-
-    return classes[value] ?? "bg-gray-100 text-gray-600";
-};
-
-/*
-|--------------------------------------------------------------------------
-| Canal
-|--------------------------------------------------------------------------
-*/
-
-const channelLabel = (value) => {
-    const labels = {
-        web: "Web",
-        whatsapp: "WhatsApp",
-        email: "Email",
-        phone: "Téléphone",
-        widget: "Widget",
-        chat: "Chat",
-        social: "Réseaux sociaux",
-    };
-
-    return labels[value] ?? value;
-};
-
-const channelClass = (value) => {
-    const classes = {
-        web: "bg-indigo-100 text-indigo-700",
-        whatsapp: "bg-green-100 text-green-700",
-        email: "bg-purple-100 text-purple-700",
-        phone: "bg-orange-100 text-orange-700",
-        widget: "bg-cyan-100 text-cyan-700",
-        chat: "bg-sky-100 text-sky-700",
-        social: "bg-pink-100 text-pink-700",
-    };
-
-    return classes[value] ?? "bg-gray-100 text-gray-600";
-};
-
-/*
-|--------------------------------------------------------------------------
-| Agent
-|--------------------------------------------------------------------------
-*/
-
-const getAgentName = (conversation) => {
-    return (
-        conversation.assigned_agent?.name ??
-        conversation.assignedAgent?.name ??
-        "Non attribuée"
-    );
-};
-
-const getAgentBadgeClass = (conversation) => {
-    if (
-        conversation.assigned_agent?.name ||
-        conversation.assignedAgent?.name
-    ) {
-        return "bg-emerald-100 text-emerald-700";
+    if (!client) {
+        return "Client inconnu";
     }
 
-    return "bg-gray-100 text-gray-500";
+    const name = `${client.first_name ?? ""} ${client.last_name ?? ""}`.trim();
+
+    return name || client.email || client.phone || "Client inconnu";
+};
+
+const initials = (name) =>
+    name
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((word) => word[0])
+        .join("")
+        .toUpperCase() || "?";
+
+const agentName = (conversation) =>
+    conversation.assigned_agent?.name ??
+    conversation.assignedAgent?.name ??
+    null;
+
+/*
+ * Temps écoulé depuis le dernier message, en clair.
+ * C'est l'information qui dit si un client attend.
+ */
+const sinceLastMessage = (conversation) => {
+    const value = conversation.last_message_at;
+
+    if (!value) {
+        return "—";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return "—";
+    }
+
+    const minutes = Math.floor((Date.now() - date.getTime()) / 60000);
+
+    if (minutes < 1) {
+        return "à l'instant";
+    }
+
+    if (minutes < 60) {
+        return `il y a ${minutes} min`;
+    }
+
+    const hours = Math.floor(minutes / 60);
+
+    if (hours < 24) {
+        return `il y a ${hours} h`;
+    }
+
+    return date.toLocaleDateString("fr-FR", {
+        day: "2-digit",
+        month: "2-digit",
+    });
 };
 
 /*
-|--------------------------------------------------------------------------
-| Total
-|--------------------------------------------------------------------------
-*/
+ * Une conversation ouverte, sans IA et sans agent, est en souffrance.
+ */
+const isStranded = (conversation) =>
+    conversation.status === "open" &&
+    !conversation.ai_enabled &&
+    !agentName(conversation);
 
-const conversationsTotal = computed(() => {
-    return (
-        conversations.value.total ??
-        conversations.value.meta?.total ??
-        conversations.value.data?.length ??
-        0
-    );
-});
+const hasConversations = computed(() => props.conversations.data.length > 0);
 </script>
 
 <template>
     <Head title="Conversations" />
 
-    <div class="min-h-screen bg-gray-50">
-        <!-- ==========================================================
-             NAVIGATION
-        =========================================================== -->
-
-        <nav class="border-b border-gray-200 bg-white">
-            <div
-                class="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8"
+    <AuthenticatedLayout>
+        <div class="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+            <PageHeader
+                title="Conversations"
+                description="Les échanges en cours, tous canaux confondus."
             >
-                <div
-                    class="flex items-center gap-6 overflow-x-auto"
-                >
-                    <Link
-                        :href="route('dashboard')"
-                        class="whitespace-nowrap text-xl font-bold text-gray-900"
+                <template #actions>
+                    <span
+                        v-if="refreshing"
+                        class="self-center text-xs text-night-400"
                     >
-                        AI Service Client
-                    </Link>
-
-                    <Link
-                        :href="route('dashboard')"
-                        class="whitespace-nowrap text-sm font-medium text-gray-600 transition hover:text-indigo-600"
-                    >
-                        Tableau de bord
-                    </Link>
-
-                    <Link
-                        :href="route('conversations.index')"
-                        class="whitespace-nowrap text-sm font-semibold text-indigo-600"
-                    >
-                        Conversations
-                    </Link>
-
-                    <Link
-                        :href="route('clients.index')"
-                        class="whitespace-nowrap text-sm font-medium text-gray-600 transition hover:text-indigo-600"
-                    >
-                        Clients
-                    </Link>
-
-                    <Link
-                        :href="route('agents.index')"
-                        class="whitespace-nowrap text-sm font-medium text-gray-600 transition hover:text-indigo-600"
-                    >
-                        Agents
-                    </Link>
-                </div>
-
-                <div
-                    class="ml-4 hidden shrink-0 items-center gap-4 sm:flex"
-                >
-                    <span class="text-sm text-gray-600">
-                        {{
-                            $page.props.auth?.user?.name ??
-                            "Administrateur"
-                        }}
+                        actualisation…
                     </span>
+                </template>
+            </PageHeader>
 
-                    <Link
-                        :href="route('logout')"
-                        method="post"
-                        as="button"
-                        class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-700"
-                    >
-                        Déconnexion
-                    </Link>
-                </div>
-            </div>
-        </nav>
+            <FlashMessages />
 
-        <!-- ==========================================================
-             CONTENU
-        =========================================================== -->
+            <!-- Filtres -->
 
-        <main
-            class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"
-        >
-            <!-- ======================================================
-                 EN-TÊTE
-            ======================================================= -->
-
-            <div
-                class="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-            >
-                <div>
-                    <h1
-                        class="text-3xl font-bold text-gray-900"
-                    >
-                        Conversations
-                    </h1>
-
-                    <p class="mt-2 text-gray-500">
-                        Gérez les demandes et échanges avec vos clients.
-                    </p>
-                </div>
-
-                <Link
-                    :href="route('dashboard')"
-                    class="inline-flex items-center justify-center rounded-lg bg-gray-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-gray-700"
-                >
-                    ← Tableau de bord
-                </Link>
-            </div>
-
-            <!-- ======================================================
-                 FILTRES
-            ======================================================= -->
-
-            <div
-                class="mb-6 rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-100"
-            >
-                <div class="mb-4">
-                    <h2
-                        class="text-base font-semibold text-gray-900"
-                    >
-                        Rechercher et filtrer
-                    </h2>
-
-                    <p class="mt-1 text-sm text-gray-500">
-                        Affinez la liste des conversations.
-                    </p>
-                </div>
-
-                <div
-                    class="grid gap-4 md:grid-cols-2 lg:grid-cols-5"
-                >
-                    <!-- RECHERCHE -->
-
-                    <div>
-                        <label
-                            for="search"
-                            class="mb-1 block text-sm font-medium text-gray-700"
-                        >
-                            Recherche
+            <SurfaceCard>
+                <div class="flex flex-wrap items-end gap-3">
+                    <div class="min-w-[220px] flex-1">
+                        <label class="block text-xs font-medium text-night-500">
+                            Rechercher
                         </label>
-
                         <input
-                            id="search"
                             v-model="search"
-                            type="text"
-                            placeholder="Client, email ou sujet..."
-                            class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                            @keyup.enter="applyFilters"
+                            type="search"
+                            placeholder="Sujet, client, email…"
+                            class="mt-1 w-full rounded-xl border-line text-sm focus:border-brand-400 focus:ring-brand-400"
                         />
                     </div>
 
-                    <!-- STATUT -->
-
                     <div>
-                        <label
-                            for="status"
-                            class="mb-1 block text-sm font-medium text-gray-700"
-                        >
+                        <label class="block text-xs font-medium text-night-500">
                             Statut
                         </label>
-
                         <select
-                            id="status"
                             v-model="status"
-                            class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                            class="mt-1 rounded-xl border-line text-sm focus:border-brand-400 focus:ring-brand-400"
                         >
-                            <option value="">
-                                Tous les statuts
-                            </option>
-
-                            <option value="open">
-                                Ouverte
-                            </option>
-
-                            <option value="pending">
-                                En attente
-                            </option>
-
-                            <option value="resolved">
-                                Résolue
-                            </option>
-
-                            <option value="closed">
-                                Fermée
-                            </option>
+                            <option value="">Tous</option>
+                            <option value="open">Ouverte</option>
+                            <option value="pending">En attente</option>
+                            <option value="resolved">Résolue</option>
+                            <option value="closed">Fermée</option>
                         </select>
                     </div>
 
-                    <!-- PRIORITÉ -->
-
                     <div>
-                        <label
-                            for="priority"
-                            class="mb-1 block text-sm font-medium text-gray-700"
-                        >
+                        <label class="block text-xs font-medium text-night-500">
                             Priorité
                         </label>
-
                         <select
-                            id="priority"
                             v-model="priority"
-                            class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                            class="mt-1 rounded-xl border-line text-sm focus:border-brand-400 focus:ring-brand-400"
                         >
-                            <option value="">
-                                Toutes les priorités
-                            </option>
-
-                            <option value="low">
-                                Faible
-                            </option>
-
-                            <option value="normal">
-                                Normale
-                            </option>
-
-                            <option value="high">
-                                Élevée
-                            </option>
-
-                            <option value="urgent">
-                                Urgente
-                            </option>
+                            <option value="">Toutes</option>
+                            <option value="urgent">Urgente</option>
+                            <option value="high">Élevée</option>
+                            <option value="normal">Normale</option>
+                            <option value="low">Faible</option>
                         </select>
                     </div>
 
-                    <!-- IA -->
-
                     <div>
-                        <label
-                            for="ai_enabled"
-                            class="mb-1 block text-sm font-medium text-gray-700"
-                        >
-                            Intelligence artificielle
+                        <label class="block text-xs font-medium text-night-500">
+                            Traitement
                         </label>
-
                         <select
-                            id="ai_enabled"
                             v-model="aiEnabled"
-                            class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                            class="mt-1 rounded-xl border-line text-sm focus:border-brand-400 focus:ring-brand-400"
                         >
-                            <option value="">
-                                Toutes
-                            </option>
-
-                            <option value="1">
-                                IA active
-                            </option>
-
-                            <option value="0">
-                                IA désactivée
-                            </option>
+                            <option value="">Tous</option>
+                            <option value="1">Assistant IA</option>
+                            <option value="0">Agent humain</option>
                         </select>
                     </div>
 
-                    <!-- AGENT -->
-
                     <div>
-                        <label
-                            for="assigned_to"
-                            class="mb-1 block text-sm font-medium text-gray-700"
-                        >
+                        <label class="block text-xs font-medium text-night-500">
                             Agent
                         </label>
-
                         <select
-                            id="assigned_to"
                             v-model="assignedTo"
-                            class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                            class="mt-1 rounded-xl border-line text-sm focus:border-brand-400 focus:ring-brand-400"
                         >
-                            <option value="">
-                                Tous les agents
-                            </option>
-
+                            <option value="">Tous</option>
                             <option
                                 v-for="agent in agents"
                                 :key="agent.id"
                                 :value="agent.id"
                             >
                                 {{ agent.name }}
-                                {{
-                                    agent.role === "owner"
-                                        ? " (Responsable)"
-                                        : ""
-                                }}
                             </option>
                         </select>
                     </div>
-                </div>
-
-                <!-- BOUTONS -->
-
-                <div class="mt-5 flex flex-wrap gap-3">
-                    <button
-                        type="button"
-                        class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
-                        @click="applyFilters"
-                    >
-                        🔎 Rechercher
-                    </button>
 
                     <button
+                        v-if="activeFilters"
                         type="button"
-                        class="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                        class="rounded-xl border border-line px-4 py-2 text-sm font-medium text-night-600 transition hover:bg-canvas-sunken"
                         @click="resetFilters"
                     >
-                        Réinitialiser
+                        Effacer ({{ activeFilters }})
                     </button>
                 </div>
-            </div>
+            </SurfaceCard>
 
-            <!-- ======================================================
-                 LISTE
-            ======================================================= -->
+            <!-- Liste -->
 
-            <div
-                class="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-100"
-            >
-                <!-- ENTÊTE -->
-
-                <div
-                    class="flex flex-col gap-3 border-b border-gray-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between"
-                >
-                    <div>
-                        <h2
-                            class="text-lg font-bold text-gray-900"
-                        >
-                            Liste des conversations
-                        </h2>
-
-                        <p class="mt-1 text-sm text-gray-500">
-                            Les échanges de votre organisation
-                        </p>
-                    </div>
-
-                    <div class="flex items-center gap-3">
-                        <span
-                            v-if="refreshing"
-                            class="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700"
-                        >
-                            <span
-                                class="h-2 w-2 animate-pulse rounded-full bg-indigo-500"
-                            ></span>
-
-                            Actualisation...
-                        </span>
-
-                        <span
-                            v-else
-                            class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700"
-                        >
-                            <span
-                                class="h-2 w-2 rounded-full bg-emerald-500"
-                            ></span>
-
-                            Temps réel
-                        </span>
-
-                        <span
-                            class="rounded-full bg-indigo-100 px-3 py-1 text-sm font-semibold text-indigo-700"
-                        >
-                            {{ conversationsTotal }}
-                        </span>
-                    </div>
-                </div>
-
-                <!-- AUCUNE CONVERSATION -->
-
-                <div
-                    v-if="!conversations.data?.length"
-                    class="px-6 py-16 text-center"
-                >
-                    <div class="text-5xl">
-                        💬
-                    </div>
-
-                    <h3
-                        class="mt-4 text-lg font-semibold text-gray-900"
-                    >
-                        Aucune conversation trouvée
-                    </h3>
-
-                    <p class="mt-2 text-sm text-gray-500">
-                        Essayez de modifier vos critères de recherche.
-                    </p>
-                </div>
-
-                <!-- CONVERSATIONS -->
-
-                <div
-                    v-else
-                    class="divide-y divide-gray-100"
-                >
+            <SurfaceCard flush>
+                <div v-if="hasConversations" class="divide-y divide-line">
                     <Link
                         v-for="conversation in conversations.data"
                         :key="conversation.id"
-                        :href="
-                            route(
-                                'conversations.show',
-                                conversation.id
-                            )
-                        "
-                        class="block px-6 py-5 transition hover:bg-gray-50"
+                        :href="route('conversations.show', conversation.id)"
+                        class="flex items-start gap-4 px-6 py-4 transition hover:bg-canvas-sunken"
                     >
-                        <div
-                            class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between"
+                        <!-- Client -->
+
+                        <span
+                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-canvas-sunken text-xs font-bold text-night-600 ring-1 ring-line"
                         >
-                            <!-- CLIENT -->
+                            {{ initials(clientName(conversation)) }}
+                        </span>
 
-                            <div
-                                class="flex min-w-0 items-center gap-4"
-                            >
-                                <div
-                                    class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-indigo-100 font-bold text-indigo-700"
-                                >
-                                    {{
-                                        getInitial(
-                                            conversation.client?.name
-                                        )
-                                    }}
-                                </div>
+                        <!-- Contenu -->
 
-                                <div class="min-w-0">
-                                    <h3
-                                        class="truncate font-semibold text-gray-900"
-                                    >
-                                        {{
-                                            conversation.client?.name ??
-                                            "Client inconnu"
-                                        }}
-                                    </h3>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <p class="truncate font-medium text-night-900">
+                                    {{ clientName(conversation) }}
+                                </p>
 
-                                    <p
-                                        class="mt-1 truncate text-sm font-medium text-gray-700"
-                                    >
-                                        {{
-                                            conversation.subject ??
-                                            "Sans sujet"
-                                        }}
-                                    </p>
-
-                                    <p
-                                        v-if="
-                                            conversation.client?.email
-                                        "
-                                        class="mt-1 truncate text-xs text-gray-400"
-                                    >
-                                        {{
-                                            conversation.client.email
-                                        }}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <!-- BADGES -->
-
-                            <div
-                                class="flex flex-wrap items-center gap-2 lg:justify-end"
-                            >
-                                <!-- CANAL -->
+                                <StateBadge
+                                    kind="channel"
+                                    :value="conversation.channel"
+                                    dense
+                                />
 
                                 <span
-                                    class="rounded-full px-3 py-1 text-xs font-medium"
-                                    :class="
-                                        channelClass(
-                                            conversation.channel
-                                        )
-                                    "
+                                    v-if="conversation.ai_enabled"
+                                    class="rounded-md bg-brand-50 px-1.5 py-0.5 text-[11px] font-semibold text-brand-700 ring-1 ring-brand-200"
                                 >
-                                    {{
-                                        channelLabel(
-                                            conversation.channel
-                                        )
-                                    }}
-                                </span>
-
-                                <!-- STATUT -->
-
-                                <span
-                                    class="rounded-full px-3 py-1 text-xs font-medium"
-                                    :class="
-                                        statusClass(
-                                            conversation.status
-                                        )
-                                    "
-                                >
-                                    {{
-                                        statusLabel(
-                                            conversation.status
-                                        )
-                                    }}
-                                </span>
-
-                                <!-- PRIORITÉ -->
-
-                                <span
-                                    class="rounded-full px-3 py-1 text-xs font-medium"
-                                    :class="
-                                        priorityClass(
-                                            conversation.priority
-                                        )
-                                    "
-                                >
-                                    {{
-                                        priorityLabel(
-                                            conversation.priority
-                                        )
-                                    }}
-                                </span>
-
-                                <!-- IA -->
-
-                                <span
-                                    v-if="
-                                        conversation.ai_enabled
-                                    "
-                                    class="rounded-full bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700"
-                                >
-                                    🤖 IA active
+                                    IA
                                 </span>
 
                                 <span
-                                    v-else
-                                    class="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-500"
+                                    v-if="isStranded(conversation)"
+                                    class="rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-200"
                                 >
-                                    IA désactivée
-                                </span>
-
-                                <!-- AGENT -->
-
-                                <span
-                                    class="rounded-full px-3 py-1 text-xs font-medium"
-                                    :class="
-                                        getAgentBadgeClass(
-                                            conversation
-                                        )
-                                    "
-                                >
-                                    👤
-                                    {{ getAgentName(conversation) }}
+                                    sans agent
                                 </span>
                             </div>
+
+                            <p class="mt-0.5 truncate text-sm text-night-500">
+                                {{ conversation.subject || "Sans sujet" }}
+                            </p>
+
+                            <p
+                                v-if="agentName(conversation)"
+                                class="mt-1 text-xs text-night-400"
+                            >
+                                {{ agentName(conversation) }}
+                            </p>
                         </div>
 
-                        <!-- DATE -->
+                        <!-- Méta -->
 
-                        <div
-                            class="mt-4 flex flex-col gap-1 text-xs text-gray-400 sm:flex-row sm:justify-end sm:gap-2"
-                        >
-                            <span>
-                                Dernière activité :
-                            </span>
+                        <div class="flex shrink-0 flex-col items-end gap-1.5">
+                            <StateBadge
+                                kind="status"
+                                :value="conversation.status"
+                                dense
+                            />
 
-                            <span>
-                                {{
-                                    conversation.last_message_at ??
-                                    "Aucune activité"
-                                }}
+                            <StateBadge
+                                v-if="
+                                    conversation.priority === 'urgent' ||
+                                    conversation.priority === 'high'
+                                "
+                                kind="priority"
+                                :value="conversation.priority"
+                                dense
+                            />
+
+                            <span class="text-xs text-night-400">
+                                {{ sinceLastMessage(conversation) }}
                             </span>
                         </div>
                     </Link>
                 </div>
 
-                <!-- PAGINATION -->
-
-                <div
-                    v-if="
-                        conversations.links?.length > 3
+                <EmptyState
+                    v-else
+                    icon="💬"
+                    title="Aucune conversation"
+                    :description="
+                        activeFilters
+                            ? 'Aucune conversation ne correspond à ces filtres.'
+                            : 'Les échanges avec vos clients apparaîtront ici.'
                     "
-                    class="flex flex-wrap items-center justify-center gap-2 border-t border-gray-200 px-6 py-5"
-                >
-                    <template
-                        v-for="(
-                            link, index
-                        ) in conversations.links"
-                        :key="index"
-                    >
-                        <Link
-                            v-if="link.url"
-                            :href="link.url"
-                            preserve-scroll
-                            preserve-state
-                            class="rounded-lg border px-3 py-2 text-sm"
-                            :class="
-                                link.active
-                                    ? 'border-indigo-600 bg-indigo-600 text-white'
-                                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                            "
-                        >
-                            <span
-                                v-html="link.label"
-                            ></span>
-                        </Link>
+                />
+            </SurfaceCard>
 
-                        <span
-                            v-else
-                            class="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-400"
-                        >
-                            <span
-                                v-html="link.label"
-                            ></span>
-                        </span>
-                    </template>
-                </div>
+            <!-- Pagination -->
+
+            <div
+                v-if="conversations.links && conversations.links.length > 3"
+                class="flex flex-wrap gap-1"
+            >
+                <Link
+                    v-for="link in conversations.links"
+                    :key="link.label"
+                    :href="link.url ?? '#'"
+                    class="rounded-lg px-3 py-1.5 text-sm transition"
+                    :class="[
+                        link.active
+                            ? 'bg-night-800 text-white'
+                            : 'bg-white text-night-600 ring-1 ring-line hover:bg-canvas-sunken',
+                        !link.url && 'pointer-events-none opacity-40',
+                    ]"
+                    v-html="link.label"
+                />
             </div>
-        </main>
-    </div>
+        </div>
+    </AuthenticatedLayout>
 </template>

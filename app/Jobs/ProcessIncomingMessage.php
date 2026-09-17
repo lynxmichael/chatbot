@@ -8,6 +8,7 @@ use App\Notifications\HumanTransferNotification;
 use App\Services\AI\AgentResult;
 use App\Services\AI\AgentRunner;
 use App\Services\AI\Autopilot\AutopilotPolicy;
+use App\Services\AI\Usage\UsageMeter;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
@@ -29,7 +30,7 @@ class ProcessIncomingMessage implements ShouldQueue
     ) {
     }
 
-    public function handle(AgentRunner $agent): void
+    public function handle(AgentRunner $agent, UsageMeter $usage): void
     {
         $message = Message::with('conversation.organization', 'conversation.client')
             ->find($this->messageId);
@@ -107,6 +108,17 @@ class ProcessIncomingMessage implements ShouldQueue
             return;
         }
 
+        /*
+         * Plafond mensuel atteint : plutôt que de laisser le client sans
+         * réponse, la conversation passe à un agent humain. Le service
+         * continue, c'est l'automatisation qui s'arrête.
+         */
+        if (!$usage->allows($conversation->organization, 'ai_messages')) {
+            $this->handOverForQuota($message, $usage);
+
+            return;
+        }
+
         $message->update([
             'ai_status' => 'processing',
             'ai_error' => null,
@@ -141,6 +153,20 @@ class ProcessIncomingMessage implements ShouldQueue
             );
 
             throw $exception;
+        }
+
+        /*
+         * Consommation enregistrée après coup : on compte ce qui a été
+         * réellement dépensé, jetons compris.
+         */
+        $usage->record($conversation->organization, [
+            'ai_messages' => 1,
+            'input_tokens' => $result->usage['input_tokens'] ?? 0,
+            'output_tokens' => $result->usage['output_tokens'] ?? 0,
+        ]);
+
+        if ($usage->shouldWarn($conversation->organization)) {
+            $this->warnOwners($conversation, $usage);
         }
 
         $this->persist($message, $result);
@@ -190,6 +216,77 @@ class ProcessIncomingMessage implements ShouldQueue
                 'confidence' => $result->confidence(),
             ]
         );
+    }
+
+    /**
+     * Bascule la conversation vers un humain, plafond atteint.
+     */
+    private function handOverForQuota(Message $message, UsageMeter $usage): void
+    {
+        $conversation = $message->conversation;
+
+        $organization = $conversation->organization;
+
+        $conversation->update([
+            'status' => 'open',
+            'ai_enabled' => false,
+        ]);
+
+        $message->update([
+            'ai_processed' => true,
+            'ai_status' => 'skipped',
+            'ai_error' => 'Plafond mensuel atteint : transfert vers un agent.',
+        ]);
+
+        Message::create([
+            'conversation_id' => $conversation->id,
+            'user_id' => null,
+            'sender_type' => 'system',
+            'content' => "Plafond mensuel de l'assistant atteint. "
+                . "Cette conversation attend un agent.",
+            'channel' => $message->channel,
+            'ai_generated' => false,
+            'ai_processed' => true,
+            'ai_status' => 'completed',
+            'metadata' => ['reason' => 'quota_exceeded'],
+        ]);
+
+        if ($usage->markBlocked($organization)) {
+            $this->warnOwners($conversation, $usage, blocked: true);
+        }
+
+        Log::warning(
+            'Plafond IA atteint.',
+            [
+                'organization_id' => $organization->id,
+                'conversation_id' => $conversation->id,
+                'consumed' => $usage->consumed($organization, 'ai_messages'),
+            ]
+        );
+    }
+
+    /**
+     * Prévient les responsables.
+     */
+    private function warnOwners(
+        $conversation,
+        UsageMeter $usage,
+        bool $blocked = false
+    ): void {
+        $owners = User::query()
+            ->where('organization_id', $conversation->organization_id)
+            ->where('role', 'owner')
+            ->where('is_active', true)
+            ->get();
+
+        foreach ($owners as $owner) {
+            $owner->notify(
+                new \App\Notifications\QuotaNotification(
+                    summary: $usage->summary($conversation->organization),
+                    blocked: $blocked,
+                )
+            );
+        }
     }
 
     /**

@@ -9,7 +9,44 @@ const props = defineProps({
     settings: { type: Object, required: true },
     tools: { type: Array, default: () => [] },
     statistics: { type: Object, default: () => ({}) },
+    usage: { type: Object, default: () => ({}) },
 });
+
+/*
+|--------------------------------------------------------------------------
+| Consommation
+|--------------------------------------------------------------------------
+|
+| Affichée en tête, avant les réglages : c'est la première chose qu'un
+| responsable veut savoir quand il ouvre cet écran.
+|
+*/
+
+const quotaBar = (entry) => {
+    if (!entry || entry.unlimited) {
+        return { width: "0%", tone: "bg-brand-500" };
+    }
+
+    const ratio = entry.ratio ?? 0;
+
+    return {
+        width: Math.min(100, ratio * 100) + "%",
+        tone:
+            ratio >= 1
+                ? "bg-rose-500"
+                : ratio >= 0.8
+                  ? "bg-amber-500"
+                  : "bg-emerald-500",
+    };
+};
+
+const cost = computed(() =>
+    (props.usage.estimated_cost ?? 0).toLocaleString("fr-FR", {
+        style: "currency",
+        currency: "USD",
+        minimumFractionDigits: 2,
+    }),
+);
 
 const successMessage = computed(() => page.props.flash?.success ?? null);
 const errorMessage = computed(() => page.props.flash?.error ?? null);
@@ -165,6 +202,108 @@ const showAdvanced = ref(false);
             >
                 {{ errorMessage }}
             </div>
+
+            <!-- Consommation du mois -->
+
+            <section
+                class="mt-8 rounded-2xl border border-line bg-white p-6 shadow-lift"
+            >
+                <div class="flex flex-wrap items-baseline justify-between gap-3">
+                    <h2 class="text-sm font-semibold text-night-900">
+                        Consommation du mois
+                    </h2>
+
+                    <p class="text-xs text-night-400">
+                        {{ usage.period }} · coût estimé {{ cost }}
+                    </p>
+                </div>
+
+                <div class="mt-5 grid gap-5 sm:grid-cols-2">
+                    <!-- Réponses de l'IA -->
+
+                    <div>
+                        <div class="flex items-baseline justify-between">
+                            <span class="text-sm text-night-600">
+                                Réponses de l'assistant
+                            </span>
+
+                            <span class="text-sm font-semibold text-night-900">
+                                {{ usage.ai_messages?.used ?? 0 }}
+                                <template v-if="!usage.ai_messages?.unlimited">
+                                    / {{ usage.ai_messages?.limit }}
+                                </template>
+                                <template v-else>
+                                    <span class="text-night-400">illimité</span>
+                                </template>
+                            </span>
+                        </div>
+
+                        <div
+                            v-if="!usage.ai_messages?.unlimited"
+                            class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-canvas-sunken"
+                        >
+                            <div
+                                class="h-full rounded-full transition-all duration-500"
+                                :class="quotaBar(usage.ai_messages).tone"
+                                :style="{ width: quotaBar(usage.ai_messages).width }"
+                            ></div>
+                        </div>
+
+                        <p
+                            v-if="usage.ai_messages?.ratio >= 1"
+                            class="mt-2 text-xs font-medium text-rose-600"
+                        >
+                            Plafond atteint : les demandes partent vers vos
+                            agents jusqu'au 1er du mois.
+                        </p>
+                    </div>
+
+                    <!-- Appels -->
+
+                    <div>
+                        <div class="flex items-baseline justify-between">
+                            <span class="text-sm text-night-600">
+                                Appels vocaux
+                            </span>
+
+                            <span class="text-sm font-semibold text-night-900">
+                                <template v-if="usage.voice_calls?.blocked">
+                                    <span class="text-night-400">désactivés</span>
+                                </template>
+                                <template v-else>
+                                    {{ usage.voice_calls?.used ?? 0 }}
+                                    <template v-if="!usage.voice_calls?.unlimited">
+                                        / {{ usage.voice_calls?.limit }}
+                                    </template>
+                                </template>
+                            </span>
+                        </div>
+
+                        <div
+                            v-if="
+                                !usage.voice_calls?.unlimited &&
+                                !usage.voice_calls?.blocked
+                            "
+                            class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-canvas-sunken"
+                        >
+                            <div
+                                class="h-full rounded-full transition-all duration-500"
+                                :class="quotaBar(usage.voice_calls).tone"
+                                :style="{ width: quotaBar(usage.voice_calls).width }"
+                            ></div>
+                        </div>
+
+                        <p class="mt-2 text-xs text-night-400">
+                            {{ usage.voice_minutes ?? 0 }} minute(s) ce mois-ci
+                        </p>
+                    </div>
+                </div>
+
+                <p class="mt-5 text-xs leading-relaxed text-night-400">
+                    Le coût estimé correspond aux jetons consommés et aux
+                    minutes d'appel. Il sert de repère, pas de facture.
+                </p>
+            </section>
 
             <form class="mt-8 space-y-6" @submit.prevent="submit">
                 <!-- Niveau -->

@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Conversation;
+use App\Models\Ticket;
 use App\Models\User;
+use App\Services\AI\Support\AgentRouter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class AgentController extends Controller
@@ -65,8 +68,30 @@ class AgentController extends Controller
             ->paginate(15)
             ->withQueryString();
 
+        /*
+         * Charge réelle : nombre de tickets ouverts par agent.
+         * C'est la valeur qu'utilise le routage automatique, donc
+         * autant la montrer telle quelle au responsable.
+         */
+        $load = app(AgentRouter::class)
+            ->openTicketsPerAgent($user->organization_id);
+
+        $agents->through(fn (User $agent) => [
+            'id' => $agent->id,
+            'name' => $agent->name,
+            'email' => $agent->email,
+            'role' => $agent->role,
+            'is_active' => (bool) $agent->is_active,
+            'is_available' => (bool) ($agent->is_available ?? true),
+            'skills' => is_array($agent->skills) ? $agent->skills : [],
+            'max_open_tickets' => (int) ($agent->max_open_tickets ?: 15),
+            'open_tickets' => (int) ($load[$agent->id] ?? 0),
+            'conversations_count' => (int) $agent->conversations_count,
+        ]);
+
         return Inertia::render('Agents/Index', [
             'agents' => $agents,
+            'categories' => config('ai.categories', []),
         ]);
     }
 
@@ -145,6 +170,12 @@ class AgentController extends Controller
             $agent
         );
 
+        $openTickets = Ticket::query()
+            ->where('organization_id', $agent->organization_id)
+            ->where('assigned_to', $agent->id)
+            ->whereIn('status', ['open', 'pending', 'in_progress'])
+            ->count();
+
         return Inertia::render('Agents/Edit', [
             'agent' => [
                 'id' => $agent->id,
@@ -152,7 +183,13 @@ class AgentController extends Controller
                 'email' => $agent->email,
                 'role' => $agent->role,
                 'is_active' => (bool) $agent->is_active,
+                'is_available' => (bool) ($agent->is_available ?? true),
+                'skills' => is_array($agent->skills) ? $agent->skills : [],
+                'max_open_tickets' => (int) ($agent->max_open_tickets ?: 15),
+                'open_tickets' => $openTickets,
             ],
+
+            'categories' => config('ai.categories', []),
         ]);
     }
 
@@ -191,10 +228,29 @@ class AgentController extends Controller
                 'min:8',
                 'confirmed',
             ],
+
+            'is_available' => ['required', 'boolean'],
+
+            'max_open_tickets' => [
+                'required',
+                'integer',
+                'min:1',
+                'max:200',
+            ],
+
+            'skills' => ['array'],
+
+            'skills.*' => [
+                'string',
+                Rule::in(config('ai.categories', [])),
+            ],
         ]);
 
         $agent->name = $validated['name'];
         $agent->email = $validated['email'];
+        $agent->is_available = $validated['is_available'];
+        $agent->max_open_tickets = $validated['max_open_tickets'];
+        $agent->skills = array_values($validated['skills'] ?? []);
 
         if (!empty($validated['password'])) {
             $agent->password = Hash::make(
