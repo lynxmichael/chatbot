@@ -158,7 +158,7 @@ class AgentRunner
         }
 
         return new AgentResult(
-            reply: trim($reply),
+            reply: $this->toPlainText($reply),
             escalated: (bool) ($context->effects['escalated'] ?? false),
             isDraft: $policy->isDraftOnly(),
             effects: $context->effects,
@@ -166,6 +166,57 @@ class AgentRunner
             steps: $steps,
             usage: $usage,
         );
+    }
+
+    /**
+     * Retire toute mise en forme Markdown de la réponse.
+     *
+     * La consigne donnée au modèle suffit la plupart du temps, mais
+     * « la plupart du temps » ne convient pas pour quelque chose que
+     * le client voit. La fenêtre de discussion affiche le texte brut :
+     * un astérisque oublié s'affiche tel quel.
+     *
+     * Le nettoyage est volontairement limité aux marqueurs de mise en
+     * forme. On ne touche ni à la ponctuation, ni aux montants, ni aux
+     * références de commande.
+     */
+    private function toPlainText(string $reply): string
+    {
+        $text = $reply;
+
+        /*
+         * Gras et italique : **texte**, __texte__, *texte*, _texte_.
+         * Le motif exige du contenu entre les marqueurs, pour ne pas
+         * abîmer une expression comme « 3 * 4 ».
+         */
+        $text = preg_replace('/\*\*(?=\S)(.+?)(?<=\S)\*\*/su', '$1', $text);
+        $text = preg_replace('/__(?=\S)(.+?)(?<=\S)__/su', '$1', $text);
+        $text = preg_replace('/(?<![\w*])\*(?=\S)([^*\n]+?)(?<=\S)\*(?![\w*])/u', '$1', $text);
+        $text = preg_replace('/(?<![\w_])_(?=\S)([^_\n]+?)(?<=\S)_(?![\w_])/u', '$1', $text);
+
+        /*
+         * Code : `texte` et blocs ```.
+         */
+        $text = preg_replace('/```[a-z]*\n?/i', '', $text);
+        $text = str_replace('`', '', $text);
+
+        /*
+         * Titres en début de ligne.
+         */
+        $text = preg_replace('/^\s{0,3}#{1,6}\s+/mu', '', $text);
+
+        /*
+         * Puces Markdown : on garde la liste, on retire le symbole.
+         */
+        $text = preg_replace('/^\s*[-*+]\s+/mu', '• ', $text);
+
+        /*
+         * Liens [texte](url) : seul le texte a du sens à l'oral
+         * comme dans une bulle de discussion.
+         */
+        $text = preg_replace('/\[([^\]]+)\]\((?:[^)]+)\)/u', '$1', $text);
+
+        return trim($text);
     }
 
     /**

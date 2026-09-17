@@ -1,104 +1,47 @@
-# État final — tout en un
-
-113 fichiers : l'état complet et cohérent de tout ce qui a été
-construit. Cette archive **remplace toutes les précédentes**.
-
-Les lots successifs se chevauchaient, et un fichier ancien pouvait en
-écraser un récent selon l'ordre d'extraction. C'est ce qui vient de se
-produire deux fois. Ici, chaque fichier est dans sa version définitive.
+# Suppression de la mise en forme
 
 ## Installation
 
-Copie le contenu par-dessus ton projet, puis :
-
 ```bash
-php artisan migrate
-php artisan config:clear
-php artisan route:clear
-npm run build
-php artisan test
+php artisan queue:restart
 ```
 
-Attendu : **84 tests, 172 assertions, tout au vert.**
+**Cette commande est indispensable.** Le worker garde le code PHP en
+mémoire : sans redémarrage, la modification n'a aucun effet et les
+astérisques reviennent.
 
-Si un test échoue encore, c'est qu'un fichier n'a pas été écrasé.
+Pas de migration, pas de build.
 
-## Pourquoi les deux erreurs précédentes
+## Ce qui change
 
-**`MODIFY COLUMN … ENUM`** — la migration des états d'appel existait en
-deux versions ; l'ancienne, propre à MySQL, empêchait toute migration
-sous SQLite.
+Le nettoyage se fait maintenant côté serveur, dans `AgentRunner`, sur
+chaque réponse avant enregistrement. Sont retirés :
 
-**`makeOrganization() undefined`** — les fabriques de test vivent dans
-`tests/Pest.php`, livré dans un lot qui n'a pas été installé. Ce même
-lot contenait aussi :
+- le gras et l'italique — `**texte**`, `__texte__`, `*texte*`, `_texte_` ;
+- le code — backticks et blocs ``` ;
+- les titres en début de ligne — `#`, `##` ;
+- les puces `-` et `*`, remplacées par `•` ;
+- les liens `[texte](url)`, dont seul le texte est conservé.
 
-- `VerifyTwilioSignature` (sécurité des webhooks vocaux) ;
-- la migration `make_client_phone_nullable`, qui corrige un **bug de
-  production** : le widget crée des clients sans téléphone alors que la
-  colonne était obligatoire. Toute conversation ou tout appel lancé sans
-  numéro échouait.
+La consigne dans le prompt reste, mais elle ne fait plus foi seule. Une
+instruction au modèle est une demande, pas une garantie — ce n'est pas
+suffisant pour quelque chose que le client voit.
 
-Les deux sont dans cette archive.
+## Ce qui n'est pas touché
 
-## À faire une fois installé
+Les pièges évités, tous vérifiés par des tests :
 
-**Sur le serveur**
+- `3 * 4` reste une multiplication ;
+- `nom_client` garde son souligné ;
+- `25 000 FCFA` et `TCK-4F2A9B1C` sont intacts ;
+- les emojis passent.
 
-```cron
-* * * * * cd /chemin/du/projet && php artisan schedule:run >> /dev/null 2>&1
-```
+## Si les astérisques persistent
 
-```bash
-php artisan queue:work --tries=3
-```
+Regarde la fiche concernée dans `/knowledge`. Si son contenu contient
+lui-même des astérisques, l'assistant les recopie — et il a raison de le
+faire, c'est ce que tu as écrit.
 
-Sans le cron, ni relances ni supervision. Sans le worker, aucune réponse
-de l'IA.
+## Tests
 
-**Dans `.env`**
-
-```env
-ANTHROPIC_API_KEY=...
-TWILIO_AUTH_TOKEN=...          # avant d'ouvrir la voix
-AI_AUTOPILOT_LEVEL=suggest     # pour commencer
-```
-
-**Dans l'application**
-
-1. `/knowledge` — importe ta FAQ. Sans fiches, l'assistant ne sait rien.
-2. `/agents` — coche les compétences de chacun, sinon le routage par
-   compétence ne sert à rien.
-3. `/autopilot` — passe en `assist` quand les brouillons te conviennent.
-
-**À supprimer**
-
-```bash
-rm public/widget/widget.backup*.js
-```
-
-Du code obsolète exposé publiquement.
-
-Et si tes pages deviennent blanches alors que le build vient de passer :
-
-```bash
-rm public/hot
-```
-
-Ce fichier est créé par `npm run dev` et fait chercher les assets sur un
-serveur de développement éteint.
-
-## Ce que contient l'archive
-
-| Domaine | Contenu |
-|---------|---------|
-| Noyau IA | agent à outils, 9 outils, Autopilot à 4 niveaux, journal |
-| Tickets | catégorie, priorité, SLA en heures ouvrées, routage |
-| Relances | programmation, exécution, clôture automatique |
-| Supervision | 9 détections, alertes, notifications |
-| Voix | accueil, sonnerie chez l'agent, transfert, signature Twilio |
-| Email | webhook entrant, réponses sortantes |
-| Connaissances | liste, écriture, import de masse, questions sans réponse |
-| Plafonds | compteurs, quotas, coût estimé, alertes |
-| Interface | console unifiée, palette cohérente, widget modernisé |
-| Tests | 84 tests, 172 assertions |
+`PlainTextTest` : 8 tests. Suite complète : **92 tests, 183 assertions.**
