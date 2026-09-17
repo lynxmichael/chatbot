@@ -27,11 +27,24 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement(
-            "ALTER TABLE calls MODIFY COLUMN status
-             ENUM('ringing','answered','completed','missed','busy','failed','cancelled')
-             NOT NULL DEFAULT 'answered'"
-        );
+        /*
+         * ENUM est propre à MySQL. Sur les autres moteurs — dont SQLite,
+         * utilisé par la suite de tests — la colonne devient une simple
+         * chaîne : la contrainte de valeurs est portée par le code.
+         */
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement(
+                "ALTER TABLE calls MODIFY COLUMN status
+                 ENUM('ringing','answered','completed','missed','busy','failed','cancelled')
+                 NOT NULL DEFAULT 'answered'"
+            );
+        } else {
+            Schema::table('calls', function (Blueprint $table) {
+                $table->string('status')
+                    ->default('answered')
+                    ->change();
+            });
+        }
 
         Schema::table('calls', function (Blueprint $table) {
             /*
@@ -66,10 +79,12 @@ return new class extends Migration
             "UPDATE calls SET status = 'answered' WHERE status IN ('ringing','completed')"
         );
 
-        DB::statement(
-            "ALTER TABLE calls MODIFY COLUMN status
-             ENUM('answered','missed','busy','failed','cancelled')
-             NOT NULL DEFAULT 'answered'"
-        );
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement(
+                "ALTER TABLE calls MODIFY COLUMN status
+                 ENUM('answered','missed','busy','failed','cancelled')
+                 NOT NULL DEFAULT 'answered'"
+            );
+        }
     }
 };

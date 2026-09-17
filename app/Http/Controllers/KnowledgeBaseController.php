@@ -93,28 +93,59 @@ class KnowledgeBaseController extends Controller
      */
     private function gaps(int $organizationId): array
     {
-        return AiAction::query()
+        /*
+         * Les fonctions JSON diffèrent d'un moteur à l'autre. Plutôt que
+         * d'écrire deux dialectes SQL, on rapatrie les recherches
+         * infructueuses des trente derniers jours et on les regroupe en
+         * PHP : le volume reste modeste et le code reste portable.
+         */
+        $rows = AiAction::query()
             ->where('organization_id', $organizationId)
             ->where('tool', 'search_knowledge')
             ->where('status', 'executed')
             ->where('created_at', '>=', now()->subDays(30))
-            ->whereRaw("JSON_EXTRACT(output, '$.found') = false")
-            ->selectRaw(
-                "JSON_UNQUOTE(JSON_EXTRACT(input, '$.query')) as question,
-                 COUNT(*) as occurrences,
-                 MAX(created_at) as last_seen"
-            )
-            ->groupBy('question')
-            ->havingRaw('question IS NOT NULL')
-            ->orderByDesc('occurrences')
-            ->limit(12)
-            ->get()
-            ->map(fn ($row) => [
-                'question' => $row->question,
-                'occurrences' => (int) $row->occurrences,
-                'last_seen' => $row->last_seen,
-            ])
-            ->all();
+            ->latest('id')
+            ->limit(2000)
+            ->get(['input', 'output', 'created_at']);
+
+        $grouped = [];
+
+        foreach ($rows as $row) {
+            $found = $row->output['found'] ?? null;
+
+            if ($found !== false) {
+                continue;
+            }
+
+            $question = trim((string) ($row->input['query'] ?? ''));
+
+            if ($question === '') {
+                continue;
+            }
+
+            /*
+             * Regroupement insensible à la casse : « horaires » et
+             * « Horaires » sont la même lacune.
+             */
+            $key = Str::lower($question);
+
+            if (!isset($grouped[$key])) {
+                $grouped[$key] = [
+                    'question' => $question,
+                    'occurrences' => 0,
+                    'last_seen' => optional($row->created_at)->toDateTimeString(),
+                ];
+            }
+
+            $grouped[$key]['occurrences']++;
+        }
+
+        usort(
+            $grouped,
+            fn ($a, $b) => $b['occurrences'] <=> $a['occurrences']
+        );
+
+        return array_slice(array_values($grouped), 0, 12);
     }
 
     public function create(Request $request)

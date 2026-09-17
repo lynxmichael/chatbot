@@ -476,6 +476,10 @@ const showAdvanced = ref(false);
                                 placeholder="Awa, assistante du service client"
                                 class="mt-1 w-full rounded-xl border-line text-sm focus:border-brand-400 focus:ring-brand-400"
                             />
+                            <p class="mt-1 text-xs text-night-400">
+                                Le nom sous lequel l'assistant se présente
+                                à vos clients, à l'écrit comme au téléphone.
+                            </p>
                         </div>
 
                         <div>
@@ -489,12 +493,17 @@ const showAdvanced = ref(false);
                                 placeholder="MAKOR Telecom"
                                 class="mt-1 w-full rounded-xl border-line text-sm focus:border-brand-400 focus:ring-brand-400"
                             />
+                            <p class="mt-1 text-xs text-night-400">
+                                Le nom de l'entreprise tel que vos clients
+                                le connaissent, s'il diffère du nom
+                                enregistré.
+                            </p>
                         </div>
 
                         <div class="sm:col-span-2">
                             <label
                                 class="block text-xs font-medium text-night-500"
-                                >Ton employé</label
+                                >Manière de s'exprimer</label
                             >
                             <input
                                 v-model="form.tone"
@@ -502,6 +511,13 @@ const showAdvanced = ref(false);
                                 placeholder="professionnel, clair et chaleureux"
                                 class="mt-1 w-full rounded-xl border-line text-sm focus:border-brand-400 focus:ring-brand-400"
                             />
+                            <p class="mt-1 text-xs text-night-400">
+                                Décrivez en quelques mots le ton que doit
+                                adopter l'assistant. Par exemple
+                                « bref et direct », « chaleureux, tutoiement »
+                                ou « très formel, vouvoiement ». Le changement
+                                s'applique dès le message suivant.
+                            </p>
                         </div>
                     </div>
                 </section>

@@ -66,7 +66,7 @@ Route::prefix('widget')
 */
 
 Route::prefix('voice/{token}')
-    ->middleware('throttle:120,1')
+    ->middleware(['throttle:120,1', 'twilio.signature'])
     ->group(function () {
 
         Route::post('/incoming', [VoiceWebhookController::class, 'incoming'])

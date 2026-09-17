@@ -16,6 +16,16 @@ return [
     'ai' => [
     'provider' => env('AI_PROVIDER', 'openai'),
 ],
+'twilio' => [
+    'auth_token' => env('TWILIO_AUTH_TOKEN'),
+
+    /*
+     * URL publique vue par Twilio. À renseigner quand l'application
+     * est derrière un proxy ou un tunnel (ngrok), car APP_URL ne
+     * correspond alors pas à l'adresse réellement appelée.
+     */
+    'webhook_base_url' => env('TWILIO_WEBHOOK_BASE_URL'),
+],
 'widget' => [
     'token' => env('WIDGET_TOKEN'),
 ],

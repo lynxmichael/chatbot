@@ -48,3 +48,55 @@ function something()
 {
     // ..
 }
+
+/*
+|--------------------------------------------------------------------------
+| Fabriques de test
+|--------------------------------------------------------------------------
+|
+| Les modèles du projet n'ont pas tous de factory. Ces fonctions créent
+| le strict nécessaire pour les tests, avec les colonnes obligatoires.
+|
+*/
+
+function makeOrganization(array $attributes = []): \App\Models\Organization
+{
+    $name = 'Organisation ' . \Illuminate\Support\Str::random(5);
+
+    return \App\Models\Organization::create(array_merge([
+        'name' => $name,
+        'slug' => \Illuminate\Support\Str::slug($name) . '-' . \Illuminate\Support\Str::random(4),
+        'email' => \Illuminate\Support\Str::random(8) . '@example.test',
+        'status' => 'active',
+        'widget_token' => \Illuminate\Support\Str::random(40),
+    ], $attributes));
+}
+
+function makeAgent(
+    \App\Models\Organization $organization,
+    array $attributes = []
+): \App\Models\User {
+    return \App\Models\User::create(array_merge([
+        'organization_id' => $organization->id,
+        'name' => 'Agent ' . \Illuminate\Support\Str::random(4),
+        'email' => \Illuminate\Support\Str::random(8) . '@example.test',
+        'password' => bcrypt('password'),
+        'role' => 'agent',
+        'is_active' => true,
+        'is_available' => true,
+        'max_open_tickets' => 15,
+    ], $attributes));
+}
+
+function makeClient(
+    \App\Models\Organization $organization,
+    array $attributes = []
+): \App\Models\Client {
+    return \App\Models\Client::create(array_merge([
+        'organization_id' => $organization->id,
+        'first_name' => 'Client',
+        'last_name' => \Illuminate\Support\Str::random(4),
+        'phone' => '+2250700' . random_int(100000, 999999),
+        'status' => 'active',
+    ], $attributes));
+}

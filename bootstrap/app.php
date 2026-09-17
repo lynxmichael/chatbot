@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'twilio.signature' => \App\Http\Middleware\VerifyTwilioSignature::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
