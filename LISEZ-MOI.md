@@ -1,47 +1,71 @@
-# Suppression de la mise en forme
+# Photos dans la base de connaissances
 
 ## Installation
 
 ```bash
+php artisan migrate
+php artisan storage:link
+php artisan config:clear
 php artisan queue:restart
+npm run build
 ```
 
-**Cette commande est indispensable.** Le worker garde le code PHP en
-mémoire : sans redémarrage, la modification n'a aucun effet et les
-astérisques reviennent.
+**146 tests, 332 assertions.**
 
-Pas de migration, pas de build.
+## Comment ça marche
 
-## Ce qui change
+Les photos se rattachent à une fiche, jamais à l'assistant directement.
+On ouvre une fiche — « Chambre Deluxe vue mer », « Attiéké poisson » —
+et on y ajoute ses photos avec une légende.
 
-Le nettoyage se fait maintenant côté serveur, dans `AgentRunner`, sur
-chaque réponse avant enregistrement. Sont retirés :
+Ensuite, quand un client écrit « je peux voir les chambres ? » :
 
-- le gras et l'italique — `**texte**`, `__texte__`, `*texte*`, `_texte_` ;
-- le code — backticks et blocs ``` ;
-- les titres en début de ligne — `#`, `##` ;
-- les puces `-` et `*`, remplacées par `•` ;
-- les liens `[texte](url)`, dont seul le texte est conservé.
+1. l'assistant cherche dans les fiches ;
+2. la recherche lui annonce les photos disponibles, avec leurs
+   identifiants et leurs légendes ;
+3. il choisit les bonnes et les envoie ;
+4. le client les voit sous la réponse, cliquables pour les agrandir.
 
-La consigne dans le prompt reste, mais elle ne fait plus foi seule. Une
-instruction au modèle est une demande, pas une garantie — ce n'est pas
-suffisant pour quelque chose que le client voit.
+**L'assistant ne peut envoyer que des identifiants retournés par une
+recherche.** C'est ce qui garantit qu'un client demandant une chambre ne
+reçoit jamais la photo d'un plat, ni celle d'une autre entreprise.
 
-## Ce qui n'est pas touché
+## Les garde-fous
 
-Les pièges évités, tous vérifiés par des tests :
+Vérifiés par des tests, parce qu'une photo envoyée au mauvais client ne
+se rattrape pas :
 
-- `3 * 4` reste une multiplication ;
-- `nom_client` garde son souligné ;
-- `25 000 FCFA` et `TCK-4F2A9B1C` sont intacts ;
-- les emojis passent.
+| Situation | Comportement |
+|-----------|--------------|
+| Photo d'une autre entreprise | refusée |
+| Fiche désactivée (offre terminée) | refusée |
+| Au téléphone | refusée, avec consigne de décrire à l'oral |
+| Plus de quatre photos | tronqué à quatre |
+| Identifiant inventé | refusé |
 
-## Si les astérisques persistent
+La limite de quatre est délibérée : au-delà, la conversation devient un
+catalogue illisible sur un téléphone.
 
-Regarde la fiche concernée dans `/knowledge`. Si son contenu contient
-lui-même des astérisques, l'assistant les recopie — et il a raison de le
-faire, c'est ce que tu as écrit.
+## La légende compte
 
-## Tests
+C'est elle que l'assistant lit pour choisir. « Chambre Deluxe, lit king
+size, vue mer » lui permet de répondre juste à « vous avez des chambres
+avec vue ? ». Une photo sans légende porte le titre de sa fiche, ce qui
+est moins précis.
 
-`PlainTextTest` : 8 tests. Suite complète : **92 tests, 183 assertions.**
+## Une décision commerciale à valider
+
+J'ai placé `send_images` dans les formules **pro** et **business**,
+pas dans le gratuit.
+
+Pour un hôtel ou un restaurant, montrer ses chambres et ses plats est
+exactement ce qui fait vendre : c'est un bon argument d'abonnement. Mais
+si tu préfères l'offrir pour rendre la démonstration plus convaincante,
+ajoute `'send_images'` à la liste `allowed_actions` de la formule
+`free`, dans `config/ai.php`.
+
+## Format des photos
+
+JPG, PNG ou WebP, 3 Mo maximum, huit par fiche. Les vignettes sont
+recadrées automatiquement ; une photo horizontale rend mieux qu'une
+verticale dans la conversation.

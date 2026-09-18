@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\InboundEmailController;
+use App\Http\Controllers\Api\PaymentWebhookController;
 use App\Http\Controllers\Api\VoiceWebhookController;
 use App\Http\Controllers\Api\WidgetCallController;
 use App\Http\Controllers\Api\WidgetController;
@@ -91,5 +92,20 @@ Route::prefix('voice/{token}')
 */
 
 Route::post('/email/{token}/inbound', [InboundEmailController::class, 'store'])
-    ->middleware('throttle:120,1')
+    ->middleware(['throttle:120,1', 'inbound.email'])
     ->name('email.inbound');
+
+/*
+|--------------------------------------------------------------------------
+| Notification de paiement
+|--------------------------------------------------------------------------
+|
+| Appelée par le prestataire. Aucune authentification n'est possible ici
+| — le prestataire ne connaît pas nos sessions — d'où la vérification
+| systématique auprès de son API avant d'accorder un abonnement.
+|
+*/
+
+Route::post('/billing/{provider}/webhook', [PaymentWebhookController::class, 'handle'])
+    ->middleware('throttle:120,1')
+    ->name('billing.webhook');

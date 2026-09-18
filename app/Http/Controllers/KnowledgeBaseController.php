@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\AiAction;
 use App\Models\KnowledgeBase;
+use App\Models\KnowledgeImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -46,11 +48,13 @@ class KnowledgeBaseController extends Controller
                 $request->input('status') === 'active',
                 fn ($query) => $query->where('is_active', true)
             )
+            ->withCount('images')
             ->orderByDesc('updated_at')
             ->paginate(15)
             ->withQueryString()
             ->through(fn (KnowledgeBase $entry) => [
                 'id' => $entry->id,
+                'images_count' => $entry->images_count,
                 'title' => $entry->title,
                 'category' => $entry->category,
                 'excerpt' => Str::limit(strip_tags($entry->content), 180),
@@ -195,6 +199,14 @@ class KnowledgeBaseController extends Controller
                 'category' => $knowledge->category,
                 'content' => $knowledge->content,
                 'is_active' => (bool) $knowledge->is_active,
+
+                'images' => $knowledge->images
+                    ->map(fn (KnowledgeImage $image) => [
+                        'id' => $image->id,
+                        'url' => $image->url(),
+                        'caption' => $image->caption,
+                    ])
+                    ->values(),
             ],
 
             'categories' => config('ai.categories', []),
@@ -244,9 +256,94 @@ class KnowledgeBaseController extends Controller
 
         $this->authorizeEntry($request, $knowledge);
 
+        /*
+         * Les fichiers ne sont pas supprimés par la cascade en base :
+         * sans cela, le disque se remplit de photos orphelines.
+         */
+        foreach ($knowledge->images as $image) {
+            Storage::disk('public')->delete($image->path);
+        }
+
         $knowledge->delete();
 
         return back()->with('success', 'Fiche supprimée.');
+    }
+
+    /**
+     * Ajoute des photos à une fiche.
+     *
+     * Une chambre, un plat, un produit : l'assistant ne peut envoyer
+     * que des images rattachées à une fiche, ce qui garantit qu'il ne
+     * montre jamais une photo hors sujet.
+     */
+    public function addImages(Request $request, KnowledgeBase $knowledge)
+    {
+        $user = $this->authorizeOwner($request);
+
+        $this->authorizeEntry($request, $knowledge);
+
+        $validated = $request->validate([
+            'images' => ['required', 'array', 'max:8'],
+            'images.*' => ['image', 'mimes:png,jpg,jpeg,webp', 'max:3072'],
+            'captions' => ['array'],
+            'captions.*' => ['nullable', 'string', 'max:150'],
+        ]);
+
+        $position = (int) $knowledge->images()->max('position');
+
+        foreach ($validated['images'] as $index => $file) {
+            $path = $file->store(
+                'knowledge/' . $user->organization_id,
+                'public'
+            );
+
+            KnowledgeImage::create([
+                'organization_id' => $user->organization_id,
+                'knowledge_base_id' => $knowledge->id,
+                'path' => $path,
+                'caption' => $validated['captions'][$index] ?? null,
+                'position' => ++$position,
+            ]);
+        }
+
+        return back()->with(
+            'success',
+            count($validated['images']) . ' photo(s) ajoutée(s).'
+        );
+    }
+
+    public function updateImage(Request $request, KnowledgeImage $image)
+    {
+        $this->authorizeOwner($request);
+
+        abort_unless(
+            $image->organization_id === $request->user()->organization_id,
+            403
+        );
+
+        $validated = $request->validate([
+            'caption' => ['nullable', 'string', 'max:150'],
+        ]);
+
+        $image->update(['caption' => $validated['caption'] ?? null]);
+
+        return back()->with('success', 'Légende enregistrée.');
+    }
+
+    public function destroyImage(Request $request, KnowledgeImage $image)
+    {
+        $this->authorizeOwner($request);
+
+        abort_unless(
+            $image->organization_id === $request->user()->organization_id,
+            403
+        );
+
+        Storage::disk('public')->delete($image->path);
+
+        $image->delete();
+
+        return back()->with('success', 'Photo supprimée.');
     }
 
     /**

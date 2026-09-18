@@ -59,6 +59,7 @@ class SearchKnowledgeTool implements Tool
         $entries = KnowledgeBase::query()
             ->where('organization_id', $context->organization->id)
             ->where('is_active', true)
+            ->with('images:id,knowledge_base_id,caption')
             ->when($category, function ($builder) use ($category) {
                 $builder->where('category', $category);
             })
@@ -133,11 +134,32 @@ class SearchKnowledgeTool implements Tool
         return [
             'found' => true,
             'results' => $matches
-                ->map(fn ($row) => [
-                    'title' => $row['entry']->title,
-                    'category' => $row['entry']->category,
-                    'content' => Str::limit($row['entry']->content, 2000),
-                ])
+                ->map(function ($row) {
+                    $entry = $row['entry'];
+
+                    $result = [
+                        'title' => $entry->title,
+                        'category' => $entry->category,
+                        'content' => Str::limit($entry->content, 2000),
+                    ];
+
+                    /*
+                     * Les images disponibles sont annoncées avec leur
+                     * identifiant : c'est ce qui permet à l'assistant de
+                     * les envoyer via send_images, sans jamais inventer
+                     * de référence.
+                     */
+                    if ($entry->images->isNotEmpty()) {
+                        $result['images'] = $entry->images
+                            ->map(fn ($image) => [
+                                'id' => $image->id,
+                                'caption' => $image->caption ?: $entry->title,
+                            ])
+                            ->all();
+                    }
+
+                    return $result;
+                })
                 ->values()
                 ->all(),
         ];

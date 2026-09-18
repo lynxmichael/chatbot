@@ -23,4 +23,15 @@ class KnowledgeBase extends Model
     {
         return $this->belongsTo(Organization::class);
     }
+
+    /**
+     * Photos illustrant cette fiche.
+     */
+    public function images()
+    {
+        return $this->hasMany(KnowledgeImage::class)
+            ->orderBy('position')
+            ->orderBy('id');
+    }
 }
+

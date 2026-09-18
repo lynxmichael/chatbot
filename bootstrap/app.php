@@ -21,6 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'twilio.signature' => \App\Http\Middleware\VerifyTwilioSignature::class,
+            'inbound.email' => \App\Http\Middleware\VerifyInboundEmail::class,
+            'super-admin' => \App\Http\Middleware\EnsureSuperAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

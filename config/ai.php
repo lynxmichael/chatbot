@@ -43,6 +43,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Durée maximale de réflexion à l'écrit
+    |--------------------------------------------------------------------------
+    |
+    | En secondes. Le client ne patiente pas en ligne comme au
+    | téléphone, la marge est donc plus large.
+    |
+    */
+
+    'time_budget' => (float) env('AI_TIME_BUDGET', 60),
+
+    /*
+    |--------------------------------------------------------------------------
     | Réglages par défaut de l'Autopilot
     |--------------------------------------------------------------------------
     |
@@ -131,6 +143,158 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Formules
+    |--------------------------------------------------------------------------
+    |
+    | Chaque entreprise est rattachée à une formule. Les valeurs d'une
+    | formule s'appliquent par-dessus les réglages par défaut, et les
+    | réglages propres à une entreprise passent encore par-dessus.
+    |
+    |     valeurs par défaut  <  formule  <  réglages de l'entreprise
+    |
+    | Ce qui permet d'accorder une exception à un client sans sortir
+    | sa formule, ni toucher aux autres.
+    |
+    | Un plafond négatif signifie « illimité », zéro signifie
+    | « interdit ».
+    |
+    */
+
+    'plans' => [
+
+        /*
+         * Découverte.
+         *
+         * Volontairement sans bloc « quota » : la formule gratuite prend
+         * les plafonds définis plus bas, eux-mêmes pilotés par le .env.
+         * Ainsi AI_QUOTA_VOICE_CALLS reste la manette utilisable pour
+         * ouvrir la voix à tout le monde, notamment pendant tes essais.
+         *
+         * Ce qui distingue le gratuit, c'est la liste d'outils.
+         */
+        'free' => [
+            'label' => 'Découverte',
+            'price' => 0,
+            'pitch' => 'De quoi juger sur pièces, sans engagement.',
+
+            'allowed_actions' => [
+                'search_knowledge',
+                'get_client_profile',
+                'get_ticket_status',
+                'record_insights',
+                'escalate_to_human',
+                'create_ticket',
+            ],
+        ],
+
+        /*
+         * Formule d'entrée payante : le chat sans limite, la voix
+         * ouverte, et les actions de suivi.
+         */
+        'pro' => [
+            'label' => 'Pro',
+            'price' => (int) env('AI_PRICE_PLAN_PRO', 25000),
+            'pitch' => 'Le chat sans limite, la voix et le suivi automatique.',
+
+            'level' => 'assist',
+
+            'quota' => [
+                'ai_messages' => -1,
+                'voice_calls' => 300,
+            ],
+
+            'allowed_actions' => [
+                'search_knowledge',
+                'get_client_profile',
+                'get_order_status',
+                'get_ticket_status',
+                'send_images',
+                'record_insights',
+                'create_ticket',
+                'update_ticket',
+                'schedule_follow_up',
+                'escalate_to_human',
+            ],
+        ],
+
+        /*
+         * Tout ouvert, y compris le mode autonome.
+         */
+        'business' => [
+            'label' => 'Business',
+            'price' => (int) env('AI_PRICE_PLAN_BUSINESS', 75000),
+            'pitch' => 'Tout ouvert, y compris l\'assistant en mode autonome.',
+
+            'level' => 'auto',
+
+            'quota' => [
+                'ai_messages' => -1,
+                'voice_calls' => -1,
+            ],
+
+            'allowed_actions' => [
+                'search_knowledge',
+                'get_client_profile',
+                'get_order_status',
+                'get_ticket_status',
+                'send_images',
+                'record_insights',
+                'create_ticket',
+                'update_ticket',
+                'schedule_follow_up',
+                'escalate_to_human',
+            ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Abonnements
+    |--------------------------------------------------------------------------
+    |
+    | Les prix des formules sont exprimés en unités entières de la
+    | devise : le franc CFA n'ayant pas de centimes, 25000 se lit
+    | 25 000 FCFA.
+    |
+    | « manual » encaisse hors ligne — virement, espèces, transfert
+    | mobile reçu directement — et le paiement est confirmé à la main
+    | depuis la console. C'est le mode par défaut : il permet de
+    | vendre avant d'avoir un compte marchand.
+    |
+    */
+
+    'billing' => [
+
+        'provider' => env('BILLING_PROVIDER', 'manual'),
+
+        'currency' => env('BILLING_CURRENCY', 'XOF'),
+
+        /*
+         * Durée d'un abonnement, en jours.
+         */
+        'period_days' => (int) env('BILLING_PERIOD_DAYS', 30),
+
+        /*
+         * Jours de tolérance après l'échéance avant de rebasculer
+         * l'entreprise en formule gratuite. Couper le service le jour
+         * même d'un retard de paiement fait perdre des clients qui
+         * seraient restés.
+         */
+        'grace_days' => (int) env('BILLING_GRACE_DAYS', 3),
+
+        'cinetpay' => [
+            'site_id' => env('CINETPAY_SITE_ID'),
+            'api_key' => env('CINETPAY_API_KEY'),
+            'secret_key' => env('CINETPAY_SECRET_KEY'),
+            'base_url' => env(
+                'CINETPAY_BASE_URL',
+                'https://api-checkout.cinetpay.com/v2'
+            ),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Plafonds de consommation
     |--------------------------------------------------------------------------
     |
@@ -211,6 +375,15 @@ return [
          * Moins d'étapes qu'à l'écrit : le client patiente en ligne.
          */
         'max_steps' => (int) env('AI_VOICE_MAX_STEPS', 3),
+
+        /*
+         * Durée maximale de réflexion, en secondes.
+         *
+         * L'opérateur coupe la requête au bout d'une quinzaine de
+         * secondes, et le client patiente en ligne pendant ce temps.
+         * Passé ce budget, l'IA conclut avec ce qu'elle sait.
+         */
+        'time_budget' => (float) env('AI_VOICE_TIME_BUDGET', 10),
     ],
 
     /*

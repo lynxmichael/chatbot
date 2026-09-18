@@ -93,8 +93,48 @@ class AgentRunner
 
         $steps = 0;
 
+        /*
+         * Budget de temps.
+         *
+         * Le nombre d'étapes ne suffit pas à protéger un appel
+         * téléphonique : trois étapes lentes dépassent largement le
+         * délai d'attente de l'opérateur, et le client entend un blanc
+         * puis une coupure. On borne donc aussi la durée réelle.
+         */
+        $budget = $context->channel === 'phone'
+            ? (float) config('ai.voice.time_budget', 10)
+            : (float) config('ai.time_budget', 60);
+
+        $startedAt = microtime(true);
+
+        $outOfTime = false;
+
         for ($step = 0; $step < $maxSteps; $step++) {
             $steps = $step + 1;
+
+            /*
+             * Temps écoulé avant cette étape : on n'entame pas un tour
+             * supplémentaire qu'on ne pourra pas terminer.
+             */
+            if (
+                $budget > 0
+                && $step > 0
+                && (microtime(true) - $startedAt) >= $budget
+            ) {
+                $outOfTime = true;
+
+                Log::info(
+                    "Budget de temps épuisé : réponse finale forcée.",
+                    [
+                        'channel' => $context->channel,
+                        'organization_id' => $context->organization->id,
+                        'steps' => $step,
+                        'elapsed' => round(microtime(true) - $startedAt, 2),
+                    ]
+                );
+
+                break;
+            }
 
             $response = $this->llm->converse(
                 $system,
@@ -150,11 +190,16 @@ class AgentRunner
         }
 
         /*
-         * Sécurité : le modèle a épuisé ses étapes sans conclure.
+         * Le modèle n'a pas conclu : étapes épuisées, ou temps écoulé.
          * On lui demande une réponse finale, sans outil cette fois.
          */
         if (!trim($reply)) {
-            $reply = $this->forceFinalAnswer($system, $messages, $usage);
+            $reply = $this->forceFinalAnswer(
+                $system,
+                $messages,
+                $usage,
+                $outOfTime
+            );
         }
 
         return new AgentResult(
@@ -378,13 +423,20 @@ class AgentRunner
     private function forceFinalAnswer(
         string $system,
         array $messages,
-        array &$usage
+        array &$usage,
+        bool $outOfTime = false
     ): string {
         $messages[] = [
             'role' => 'user',
             'content' => "Rédige maintenant ta réponse finale au client, "
                 . "en te basant uniquement sur ce que tu as pu vérifier. "
-                . "N'utilise plus d'outil.",
+                . "N'utilise plus d'outil."
+                . ($outOfTime
+                    ? " Tu manques de temps : si tu n'as pas pu vérifier "
+                        . "ce qu'il fallait, dis simplement au client que "
+                        . "tu vérifies et qu'on revient vers lui, sans "
+                        . "inventer de réponse."
+                    : ''),
         ];
 
         $response = $this->llm->converse($system, $messages);

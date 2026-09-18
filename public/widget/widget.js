@@ -65,9 +65,11 @@
 
             <div id="ai-widget-window" hidden>
                 <div id="ai-widget-header">
-                    <div>
-                        <strong>AI Service Client</strong>
-                        <small>Service client</small>
+                    <span id="ai-widget-logo" class="ai-widget-logo"></span>
+
+                    <div class="ai-widget-identity">
+                        <strong id="ai-widget-title">Service client</strong>
+                        <small>En ligne</small>
                     </div>
 
                     <button
@@ -82,7 +84,7 @@
                 <div id="ai-widget-body">
                     <div id="ai-widget-welcome">
                         <strong>Bonjour 👋</strong>
-                        <p>
+                        <p id="ai-widget-welcome-text">
                             Comment pouvons-nous vous aider ?
                         </p>
                     </div>
@@ -1344,7 +1346,8 @@
                     ) {
                         addMessage(
                             'ai',
-                            message.content
+                            message.content,
+                            message.attachments
                         );
                     }
 
@@ -1354,7 +1357,8 @@
                     ) {
                         addMessage(
                             'agent',
-                            message.content
+                            message.content,
+                            message.attachments
                         );
                     }
 
@@ -1527,7 +1531,8 @@
                     ) {
                         addMessage(
                             'ai',
-                            message.content
+                            message.content,
+                            message.attachments
                         );
                     }
 
@@ -1537,7 +1542,8 @@
                     ) {
                         addMessage(
                             'agent',
-                            message.content
+                            message.content,
+                            message.attachments
                         );
                     }
 
@@ -1610,7 +1616,8 @@
 
     function addMessage(
         sender,
-        content
+        content,
+        attachments
     ) {
         const messages =
             document.getElementById(
@@ -1629,12 +1636,68 @@
         message.className =
             `ai-widget-message ${sender}`;
 
+        /*
+         * textContent et non innerHTML : le contenu vient du modèle,
+         * il ne doit jamais être interprété comme du HTML.
+         */
         message.textContent =
             content || '';
 
         messages.appendChild(
             message
         );
+
+        /*
+         * Photos jointes, affichées sous le message.
+         */
+        if (Array.isArray(attachments) && attachments.length) {
+            const gallery = document.createElement('div');
+
+            gallery.className =
+                `ai-widget-gallery ${sender}`
+                + (attachments.length === 1 ? ' single' : '');
+
+            attachments.forEach(function (attachment) {
+                if (!attachment || !attachment.url) {
+                    return;
+                }
+
+                const figure = document.createElement('figure');
+
+                figure.className = 'ai-widget-photo';
+
+                const image = document.createElement('img');
+
+                image.src = attachment.url;
+                image.alt = attachment.caption || '';
+                image.loading = 'lazy';
+
+                /*
+                 * Ouvrir la photo en grand dans un nouvel onglet : sur
+                 * mobile, la vignette ne suffit pas à juger d'une
+                 * chambre ou d'un plat.
+                 */
+                image.addEventListener('click', function () {
+                    window.open(attachment.url, '_blank', 'noopener');
+                });
+
+                figure.appendChild(image);
+
+                if (attachment.caption) {
+                    const caption = document.createElement('figcaption');
+
+                    caption.textContent = attachment.caption;
+
+                    figure.appendChild(caption);
+                }
+
+                gallery.appendChild(figure);
+            });
+
+            if (gallery.childElementCount) {
+                messages.appendChild(gallery);
+            }
+        }
 
         messages.scrollTop =
             messages.scrollHeight;
@@ -1728,8 +1791,125 @@
     |--------------------------------------------------------------------------
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Identité visuelle
+    |--------------------------------------------------------------------------
+    |
+    | Le widget est posé sur le site d'un client : il doit porter SES
+    | couleurs, pas les nôtres. La configuration est chargée après
+    | l'affichage, pour que la bulle apparaisse sans attendre le réseau.
+    |
+    */
+
+    async function applyBranding() {
+        try {
+            const response = await fetch(
+                `${apiUrl}/widget/config`,
+                {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Widget-Token': token,
+                    },
+                    cache: 'no-store',
+                }
+            );
+
+            if (!response.ok) {
+                return;
+            }
+
+            const data = await response.json();
+
+            const branding = data.branding;
+
+            if (!branding) {
+                return;
+            }
+
+            const root = document.getElementById('ai-service-widget');
+
+            if (!root) {
+                return;
+            }
+
+            /*
+             * La couleur est validée côté serveur au format #RRGGBB.
+             * On la revalide ici : ce script s'exécute sur une page
+             * tierce, et rien de ce qui vient du réseau n'entre dans
+             * une feuille de style sans contrôle.
+             */
+            if (/^#[0-9A-Fa-f]{6}$/.test(branding.color || '')) {
+                root.style.setProperty('--aiw-brand', branding.color);
+                root.style.setProperty(
+                    '--aiw-brand-dark',
+                    shade(branding.color, -18)
+                );
+            }
+
+            const title = document.getElementById('ai-widget-title');
+
+            if (title && branding.name) {
+                title.textContent = branding.name;
+            }
+
+            const welcome = document.getElementById('ai-widget-welcome-text');
+
+            if (welcome && branding.welcome) {
+                welcome.textContent = branding.welcome;
+            }
+
+            /*
+             * Logo : injecté comme source d'image, jamais comme HTML.
+             */
+            const holder = document.getElementById('ai-widget-logo');
+
+            if (holder && branding.logo) {
+                const image = document.createElement('img');
+
+                image.src = branding.logo;
+                image.alt = '';
+                image.className = 'ai-widget-logo-image';
+
+                holder.innerHTML = '';
+                holder.appendChild(image);
+            }
+        } catch (error) {
+            /*
+             * Sans configuration, le widget garde son apparence par
+             * défaut. Mieux vaut un widget neutre qu'un widget absent.
+             */
+            console.warn('[AI Widget] Identité visuelle indisponible.');
+        }
+    }
+
+    /*
+     * Éclaircit ou assombrit une couleur hexadécimale.
+     */
+    function shade(hex, percent) {
+        const value = parseInt(hex.slice(1), 16);
+
+        const channels = [
+            (value >> 16) & 255,
+            (value >> 8) & 255,
+            value & 255,
+        ].map(function (channel) {
+            const shifted = Math.round(channel * (1 + percent / 100));
+
+            return Math.max(0, Math.min(255, shifted));
+        });
+
+        return '#' + channels
+            .map(function (channel) {
+                return channel.toString(16).padStart(2, '0');
+            })
+            .join('');
+    }
+
     function initializeWidget() {
         createWidget();
+
+        applyBranding();
 
         /*
         * Vérifier si une conversation existe déjà.

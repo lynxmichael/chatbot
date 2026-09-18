@@ -5,6 +5,9 @@ use App\Http\Controllers\AiController;
 use App\Http\Controllers\AutopilotController;
 use App\Http\Controllers\CallDeskController;
 use App\Http\Controllers\KnowledgeBaseController;
+use App\Http\Controllers\Admin\PlatformController;
+use App\Http\Controllers\BrandingController;
+use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\CallController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ConversationController;
@@ -122,6 +125,72 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | Administration de la plateforme
+    |--------------------------------------------------------------------------
+    |
+    | Réservé aux administrateurs, au-dessus des organisations.
+    |
+    */
+
+    Route::middleware('super-admin')
+        ->prefix('admin')
+        ->name('admin.')
+        ->group(function () {
+
+            Route::get('/', [PlatformController::class, 'index'])
+                ->name('index');
+
+            Route::get('/payments', [PlatformController::class, 'payments'])
+                ->name('payments');
+
+            Route::post('/payments/{payment}/confirm', [PlatformController::class, 'confirmPayment'])
+                ->name('payments.confirm');
+
+            Route::post('/payments/{payment}/reject', [PlatformController::class, 'rejectPayment'])
+                ->name('payments.reject');
+
+            Route::post('/organizations/{organization}/plan', [PlatformController::class, 'changePlan'])
+                ->name('organizations.plan');
+
+            Route::get('/settings', [PlatformController::class, 'settings'])
+                ->name('settings');
+
+            Route::patch('/settings', [PlatformController::class, 'updateSettings'])
+                ->name('settings.update');
+        });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Identité visuelle
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/branding', [BrandingController::class, 'index'])
+        ->name('branding.index');
+
+    Route::post('/branding', [BrandingController::class, 'update'])
+        ->name('branding.update');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Abonnement
+    |--------------------------------------------------------------------------
+    */
+
+    Route::prefix('subscription')->name('subscription.')->group(function () {
+
+        Route::get('/', [SubscriptionController::class, 'index'])
+            ->name('index');
+
+        Route::post('/checkout', [SubscriptionController::class, 'checkout'])
+            ->name('checkout');
+
+        Route::get('/return', [SubscriptionController::class, 'return'])
+            ->name('return');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
     | Base de connaissances
     |--------------------------------------------------------------------------
     |
@@ -158,6 +227,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::delete('/{knowledge}', [KnowledgeBaseController::class, 'destroy'])
             ->name('destroy');
+
+        /*
+         * Photos illustrant une fiche.
+         */
+
+        Route::post('/{knowledge}/images', [KnowledgeBaseController::class, 'addImages'])
+            ->name('images.store');
+
+        Route::patch('/images/{image}', [KnowledgeBaseController::class, 'updateImage'])
+            ->name('images.update');
+
+        Route::delete('/images/{image}', [KnowledgeBaseController::class, 'destroyImage'])
+            ->name('images.destroy');
     });
 
     /*

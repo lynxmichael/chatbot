@@ -71,6 +71,27 @@ const baseNavigation = [
         ownerOnly: true,
     },
     {
+        name: "Apparence",
+        route: "branding.index",
+        pattern: "branding.*",
+        icon: "palette",
+        ownerOnly: true,
+    },
+    {
+        name: "Abonnement",
+        route: "subscription.index",
+        pattern: "subscription.*",
+        icon: "card",
+        ownerOnly: true,
+    },
+    {
+        name: "Plateforme",
+        route: "admin.index",
+        pattern: "admin.*",
+        icon: "globe",
+        adminOnly: true,
+    },
+    {
         name: "Autopilot",
         route: "autopilot.index",
         pattern: "autopilot.*",
@@ -80,14 +101,21 @@ const baseNavigation = [
 ];
 
 /*
- * Les réglages de l'IA et la validation de ses actions
- * ne concernent que le propriétaire de l'organisation.
+ * Deux niveaux de visibilité : « ownerOnly » pour le responsable d'une
+ * entreprise, « adminOnly » pour l'exploitant de la plateforme, qui
+ * n'appartient à aucune entreprise.
  */
-const navigation = computed(() =>
-    baseNavigation.filter(
-        (item) => !item.ownerOnly || page.props.auth?.user?.role === "owner",
-    ),
-);
+const navigation = computed(() => {
+    const user = page.props.auth?.user;
+
+    return baseNavigation.filter((item) => {
+        if (item.adminOnly) {
+            return Boolean(user?.is_super_admin);
+        }
+
+        return !item.ownerOnly || user?.role === "owner";
+    });
+});
 
 const isCurrent = (pattern) => route().current(pattern);
 
@@ -275,6 +303,9 @@ const icons = {
     ticket: "M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4a2 2 0 0 0 0-4V6Z",
     users: "M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM2 20a7 7 0 0 1 14 0H2Zm15 0a8.9 8.9 0 0 0-1.7-5A5.5 5.5 0 0 1 22 20h-5Z",
     shield: "M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z",
+    globe: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 2c1.7 0 3.3 2.1 3.8 5H8.2C8.7 6.1 10.3 4 12 4ZM4.3 11h3.4c-.1 1.3-.1 2.7 0 4H4.3a8 8 0 0 1 0-4Zm0 6h3.9c.5 2.9 2.1 5 3.8 5s3.3-2.1 3.8-5h3.9a8 8 0 0 1-15.4 0Zm11.9-2c.1-1.3.1-2.7 0-4h3.5a8 8 0 0 1 0 4h-3.5Z",
+    palette: "M12 2a10 10 0 0 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.2 0-1.1.9-2 2-2h2.4A4.6 4.6 0 0 0 22 10.8C22 5.9 17.5 2 12 2Zm-5.5 9a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm3-4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm3.5 4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Z",
+    card: "M2 7a3 3 0 0 1 3-3h14a3 3 0 0 1 3 3v1H2V7Zm0 3h20v7a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-7Zm4 5h5v2H6v-2Z",
     book: "M4 4.5A2.5 2.5 0 0 1 6.5 2H20v15H6.5A2.5 2.5 0 0 0 4 19.5V4.5ZM6.5 17H20v3H6.5A1.5 1.5 0 0 1 6.5 17Z",
     spark: "M12 2l2.2 5.8L20 10l-5.8 2.2L12 18l-2.2-5.8L4 10l5.8-2.2L12 2Zm6.5 11 1.1 2.9L22.5 17l-2.9 1.1L18.5 21l-1.1-2.9L14.5 17l2.9-1.1L18.5 13Z",
 };

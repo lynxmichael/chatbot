@@ -1,6 +1,6 @@
 <script setup>
-import { computed } from "vue";
-import { Head, Link, useForm } from "@inertiajs/vue3";
+import { computed, ref } from "vue";
+import { Head, Link, router, useForm } from "@inertiajs/vue3";
 
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import PageHeader from "@/Components/UI/PageHeader.vue";
@@ -47,6 +47,70 @@ const categoryLabels = {
 };
 
 const label = (value) => categoryLabels[value] ?? value;
+
+/*
+|--------------------------------------------------------------------------
+| Photos
+|--------------------------------------------------------------------------
+|
+| L'assistant ne peut envoyer que des photos rattachées à une fiche.
+| Une chambre, un plat, un produit : la fiche décrit, les photos
+| montrent.
+|
+*/
+
+const uploads = ref([]);
+
+const uploading = ref(false);
+
+const pickImages = (event) => {
+    uploads.value = Array.from(event.target.files ?? []).map((file) => ({
+        file,
+        caption: "",
+        preview: URL.createObjectURL(file),
+    }));
+};
+
+const sendImages = () => {
+    if (!uploads.value.length || !props.entry) {
+        return;
+    }
+
+    uploading.value = true;
+
+    const payload = new FormData();
+
+    uploads.value.forEach((item, index) => {
+        payload.append(`images[${index}]`, item.file);
+        payload.append(`captions[${index}]`, item.caption ?? "");
+    });
+
+    router.post(route("knowledge.images.store", props.entry.id), payload, {
+        preserveScroll: true,
+        forceFormData: true,
+        onSuccess: () => {
+            uploads.value = [];
+        },
+        onFinish: () => {
+            uploading.value = false;
+        },
+    });
+};
+
+const saveCaption = (image) =>
+    router.patch(
+        route("knowledge.images.update", image.id),
+        { caption: image.caption },
+        { preserveScroll: true },
+    );
+
+const removeImage = (image) => {
+    if (window.confirm("Supprimer cette photo ?")) {
+        router.delete(route("knowledge.images.destroy", image.id), {
+            preserveScroll: true,
+        });
+    }
+};
 </script>
 
 <template>
@@ -176,6 +240,121 @@ const label = (value) => categoryLabels[value] ?? value;
                     </button>
                 </div>
             </form>
+
+            <!-- Photos : seulement sur une fiche déjà créée -->
+
+            <SurfaceCard
+                v-if="isEdit"
+                title="Photos"
+                description="L'assistant les enverra au client qui demande à voir ce que décrit cette fiche."
+            >
+                <!-- Photos existantes -->
+
+                <div
+                    v-if="entry.images?.length"
+                    class="grid gap-3 sm:grid-cols-3"
+                >
+                    <figure
+                        v-for="image in entry.images"
+                        :key="image.id"
+                        class="overflow-hidden rounded-xl border border-line"
+                    >
+                        <img
+                            :src="image.url"
+                            :alt="image.caption ?? ''"
+                            class="h-28 w-full object-cover"
+                        />
+
+                        <figcaption class="space-y-2 p-2">
+                            <input
+                                v-model="image.caption"
+                                type="text"
+                                maxlength="150"
+                                placeholder="Légende"
+                                class="w-full rounded-lg border-line text-xs focus:border-brand-400 focus:ring-brand-400"
+                                @blur="saveCaption(image)"
+                            />
+
+                            <button
+                                type="button"
+                                class="text-xs text-rose-600 transition hover:text-rose-700"
+                                @click="removeImage(image)"
+                            >
+                                Supprimer
+                            </button>
+                        </figcaption>
+                    </figure>
+                </div>
+
+                <p v-else class="text-sm text-night-400">
+                    Aucune photo pour cette fiche.
+                </p>
+
+                <!-- Ajout -->
+
+                <div class="mt-5 border-t border-line pt-5">
+                    <label
+                        class="inline-block cursor-pointer rounded-xl border border-line bg-white px-4 py-2 text-sm font-medium text-night-700 transition hover:bg-canvas-sunken"
+                    >
+                        Choisir des photos
+                        <input
+                            type="file"
+                            multiple
+                            class="hidden"
+                            accept="image/png,image/jpeg,image/webp"
+                            @change="pickImages"
+                        />
+                    </label>
+
+                    <p class="mt-2 text-xs text-night-400">
+                        JPG, PNG ou WebP. 3 Mo par photo, huit au maximum.
+                        La légende aide l'assistant à choisir la bonne image.
+                    </p>
+
+                    <div v-if="uploads.length" class="mt-4 space-y-3">
+                        <div
+                            v-for="(item, index) in uploads"
+                            :key="index"
+                            class="flex items-center gap-3"
+                        >
+                            <img
+                                :src="item.preview"
+                                alt=""
+                                class="h-14 w-14 shrink-0 rounded-lg object-cover ring-1 ring-line"
+                            />
+
+                            <input
+                                v-model="item.caption"
+                                type="text"
+                                maxlength="150"
+                                placeholder="Légende (Chambre Deluxe, vue mer…)"
+                                class="w-full rounded-xl border-line text-sm focus:border-brand-400 focus:ring-brand-400"
+                            />
+                        </div>
+
+                        <button
+                            type="button"
+                            :disabled="uploading"
+                            class="rounded-xl bg-brand-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-50"
+                            @click="sendImages"
+                        >
+                            {{
+                                uploading
+                                    ? "Envoi…"
+                                    : `Ajouter ${uploads.length} photo(s)`
+                            }}
+                        </button>
+                    </div>
+                </div>
+            </SurfaceCard>
+
+            <p
+                v-else
+                class="rounded-xl bg-canvas-sunken px-4 py-3 text-sm text-night-500"
+            >
+                Enregistrez d'abord la fiche : vous pourrez ensuite y
+                ajouter des photos.
+            </p>
         </div>
     </AuthenticatedLayout>
 </template>

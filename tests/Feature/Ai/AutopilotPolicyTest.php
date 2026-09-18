@@ -15,11 +15,19 @@ use App\Services\AI\Tools\ToolRegistry;
 |
 */
 
+/*
+ * Ces tests portent sur les niveaux d'autonomie, pas sur les formules.
+ * On part donc de la formule la plus ouverte, pour que les neuf outils
+ * soient présents et que chaque niveau se juge sur lui-même.
+ */
 function policyFor(array $settings): AutopilotPolicy
 {
     $organization = new Organization(['name' => 'Test']);
 
-    $organization->ai_settings = $settings;
+    $organization->ai_settings = array_merge(
+        ['plan' => 'business'],
+        $settings
+    );
 
     return AutopilotPolicy::forOrganization($organization);
 }
@@ -99,4 +107,18 @@ it('retombe sur la configuration par défaut sans réglage', function () {
     $policy = AutopilotPolicy::forOrganization(null);
 
     expect($policy->level())->toBe(config('ai.autopilot.level'));
+});
+
+it('restreint les outils en formule gratuite', function () {
+    $organization = new Organization(['name' => 'Test']);
+
+    $organization->ai_settings = ['plan' => 'free'];
+
+    $actions = AutopilotPolicy::forOrganization($organization)
+        ->allowedActions();
+
+    expect($actions)->toContain('search_knowledge')
+        ->and($actions)->toContain('escalate_to_human')
+        ->and($actions)->not->toContain('get_order_status')
+        ->and($actions)->not->toContain('schedule_follow_up');
 });

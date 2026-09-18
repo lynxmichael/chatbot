@@ -19,6 +19,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'is_super_admin',
         'skills',
         'is_active',
         'is_available',
@@ -37,11 +38,23 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'is_super_admin' => 'boolean',
             'is_available' => 'boolean',
             'skills' => 'array',
             'max_open_tickets' => 'integer',
             'last_login_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Administrateur de la plateforme, au-dessus des organisations.
+     *
+     * À ne pas confondre avec le rôle « owner », qui désigne le
+     * responsable d'une entreprise cliente.
+     */
+    public function isSuperAdmin(): bool
+    {
+        return (bool) $this->is_super_admin;
     }
 
     public function organization(): BelongsTo

@@ -31,6 +31,14 @@ class AgentResult
             : null;
     }
 
+    /**
+     * Photos jointes par l'assistant à cette réponse.
+     */
+    public function attachments(): array
+    {
+        return $this->effects['attachments'] ?? [];
+    }
+
     public function ticketNumber(): ?string
     {
         return $this->effects['ticket_number'] ?? null;
@@ -63,6 +71,7 @@ class AgentResult
             'sentiment' => $this->sentiment(),
             'confidence' => $this->confidence(),
             'ticket_number' => $this->ticketNumber(),
+            'attachments' => $this->attachments(),
             'tools_used' => array_values(
                 array_unique(
                     array_map(

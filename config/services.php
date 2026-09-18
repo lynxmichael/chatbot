@@ -16,6 +16,26 @@ return [
     'ai' => [
     'provider' => env('AI_PROVIDER', 'openai'),
 ],
+'inbound_email' => [
+
+    /*
+     * mailgun | postmark | sendgrid. Détermine le mode de
+     * vérification appliqué aux webhooks entrants.
+     */
+    'provider' => env('INBOUND_EMAIL_PROVIDER', 'postmark'),
+
+    /*
+     * Mot de passe de l'authentification HTTP basique, à renseigner
+     * dans l'URL du webhook chez le fournisseur.
+     */
+    'basic_password' => env('INBOUND_EMAIL_PASSWORD'),
+
+    /*
+     * Clé de signature Mailgun, onglet Webhooks du tableau de bord.
+     */
+    'mailgun_key' => env('INBOUND_EMAIL_MAILGUN_KEY'),
+],
+
 'twilio' => [
     'auth_token' => env('TWILIO_AUTH_TOKEN'),
 

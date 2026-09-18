@@ -24,6 +24,12 @@ class WidgetController extends Controller
                 'id' => $organization->id,
                 'name' => $organization->name,
             ],
+
+            /*
+             * Identité visuelle appliquée par le widget sur le site du
+             * client.
+             */
+            'branding' => $organization->branding(),
         ]);
     }
 
@@ -211,6 +217,7 @@ class WidgetController extends Controller
             'ai_status',
             'created_at',
             'user_id',
+            'metadata',
         ]);
 
         return response()->json([
@@ -218,7 +225,32 @@ class WidgetController extends Controller
             'conversation_id' => $conversation->id,
             'ai_enabled' => (bool) $conversation->ai_enabled,
             'status' => $conversation->status,
-            'messages' => $messages,
+
+            /*
+             * Seules les pièces jointes sont extraites des métadonnées :
+             * le reste est interne (jetons consommés, outils employés) et
+             * n'a rien à faire sur le site d'un client.
+             */
+            'messages' => $messages->map(function ($message) {
+                $attachments = $message->metadata['attachments'] ?? [];
+
+                return [
+                    'id' => $message->id,
+                    'sender_type' => $message->sender_type,
+                    'content' => $message->content,
+                    'ai_generated' => $message->ai_generated,
+                    'ai_status' => $message->ai_status,
+                    'created_at' => $message->created_at,
+                    'user_id' => $message->user_id,
+                    'attachments' => array_map(
+                        fn ($attachment) => [
+                            'url' => $attachment['url'] ?? null,
+                            'caption' => $attachment['caption'] ?? null,
+                        ],
+                        is_array($attachments) ? $attachments : []
+                    ),
+                ];
+            }),
         ]);
     }
 

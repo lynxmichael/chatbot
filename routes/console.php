@@ -40,3 +40,11 @@ Schedule::command('ai:supervise --notify')
 Schedule::command('ai:auto-close')
     ->hourly()
     ->withoutOverlapping();
+
+/*
+ * Abonnements : alerte avant échéance, retour en gratuit après.
+ * Une fois par jour suffit.
+ */
+Schedule::command('ai:subscriptions')
+    ->dailyAt('07:00')
+    ->withoutOverlapping();
