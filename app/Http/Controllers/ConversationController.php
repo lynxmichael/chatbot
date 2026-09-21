@@ -42,9 +42,10 @@ class ConversationController extends Controller
         );
 
         /*
-         * Le propriétaire peut tout modifier.
+         * Un rôle habilité à voir toute l'activité peut aussi agir
+         * dessus : propriétaire, administrateur, superviseur.
          */
-        if ($user->role === 'owner') {
+        if ($user->hasAbility('records.view.all')) {
             return;
         }
 
@@ -74,7 +75,12 @@ class ConversationController extends Controller
         ])->where(
             'organization_id',
             $user->organization_id
-        );
+        )
+            /*
+             * Un agent ne voit que ses dossiers et ceux que personne
+             * n'a encore pris.
+             */
+            ->visibleTo($user);
 
         /*
         |--------------------------------------------------------------------------
@@ -174,20 +180,12 @@ class ConversationController extends Controller
         }
 
         /*
-        |--------------------------------------------------------------------------
-        | Agent connecté
-        |--------------------------------------------------------------------------
-        |
-        | Un agent ne voit que les conversations qui lui sont attribuées.
-        |
-        */
+         * La restriction par agent est portée par visibleTo(), appliqué
+         * à la requête plus haut. Le filtre qui se trouvait ici était
+         * plus strict : il masquait aussi les conversations sans
+         * responsable, que personne n'aurait donc jamais traitées.
+         */
 
-        if ($user->role === 'agent') {
-            $query->where(
-                'assigned_to',
-                $user->id
-            );
-        }
 
         /*
         |--------------------------------------------------------------------------
@@ -260,16 +258,17 @@ class ConversationController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | Un agent ne peut voir que ses conversations
+        | Un agent ne voit que ses conversations
         |--------------------------------------------------------------------------
+        |
+        | Même règle que la liste, y compris pour les conversations sans
+        | responsable : les afficher puis refuser l'ouverture au clic
+        | serait incohérent, et c'est précisément ce que faisait la
+        | version précédente.
+        |
         */
 
-        if (
-            $user->role === 'agent'
-            && $conversation->assigned_to !== $user->id
-        ) {
-            abort(403);
-        }
+        abort_unless($conversation->isVisibleTo($user), 403);
 
         /*
         |--------------------------------------------------------------------------
@@ -324,16 +323,14 @@ class ConversationController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $canModify = false;
-
-        if ($user->role === 'owner') {
-            $canModify = true;
-        } elseif (
-            $user->role === 'agent'
-            && $conversation->assigned_to === $user->id
-        ) {
-            $canModify = true;
-        }
+        /*
+         * Modifiable par qui supervise l'ensemble, ou par l'agent à qui
+         * la conversation est confiée. Une conversation sans
+         * responsable reste modifiable par celui qui la prend.
+         */
+        $canModify = $user->hasAbility('records.view.all')
+            || $conversation->assigned_to === $user->id
+            || $conversation->assigned_to === null;
 
         return Inertia::render(
             'Conversations/Show',
@@ -341,7 +338,7 @@ class ConversationController extends Controller
                 'conversation' => $conversation,
                 'agents' => $agents,
                 'canModify' => $canModify,
-                'isOwner' => $user->role === 'owner',
+                'canAssign' => $user->hasAbility('records.assign'),
                 'currentUserId' => $user->id,
             ]
         );
@@ -446,10 +443,11 @@ class ConversationController extends Controller
             )
         ) {
             /*
-             * Seul le owner peut changer l'attribution.
+             * Répartir le travail demande un droit dédié : un agent
+             * prend un dossier libre, il ne le confie pas à un autre.
              */
             abort_unless(
-                $user->role === 'owner',
+                $user->hasAbility('records.assign'),
                 403
             );
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\OrganizationProvisioner;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,17 +32,31 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $request->validate([
+        $validated = $request->validate([
+            'company_name' => 'required|string|max:120',
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
+            'phone' => 'nullable|string|max:30',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
+        /*
+         * Une inscription crée une entreprise, pas seulement un compte.
+         *
+         * Auparavant, l'utilisateur était créé sans organisation : il se
+         * retrouvait devant une application où presque chaque page
+         * répondait « introuvable ». C'était le trou par lequel aucun
+         * client ne pouvait entrer.
+         */
+        $created = app(OrganizationProvisioner::class)->create(
+            companyName: $validated['company_name'],
+            ownerName: $validated['name'],
+            email: $validated['email'],
+            password: $validated['password'],
+            phone: $validated['phone'] ?? null,
+        );
+
+        $user = $created['owner'];
 
         event(new Registered($user));
 

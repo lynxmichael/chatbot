@@ -131,10 +131,10 @@ const hasAgents = computed(() => props.agents.data.length > 0);
                                     </p>
 
                                     <span
-                                        v-if="agent.role === 'owner'"
+                                        v-if="agent.role !== 'agent'"
                                         class="rounded-md bg-night-100 px-1.5 py-0.5 text-[11px] font-semibold text-night-600"
                                     >
-                                        responsable
+                                        {{ agent.role_label ?? agent.role }}
                                     </span>
 
                                     <span

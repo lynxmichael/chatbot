@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToOrganization;
+use App\Models\Concerns\RestrictsToAgent;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,6 +13,8 @@ use App\Models\Ticket;
 
 class Conversation extends Model
 {
+    use BelongsToOrganization, RestrictsToAgent;
+
     use HasFactory;
 
     protected $fillable = [
@@ -39,10 +44,6 @@ class Conversation extends Model
         ];
     }
 
-    public function organization(): BelongsTo
-    {
-        return $this->belongsTo(Organization::class);
-    }
 
     public function client(): BelongsTo
     {

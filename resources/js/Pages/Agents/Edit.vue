@@ -10,9 +10,11 @@ import FlashMessages from "@/Components/UI/FlashMessages.vue";
 const props = defineProps({
     agent: { type: Object, required: true },
     categories: { type: Array, default: () => [] },
+    roles: { type: Array, default: () => [] },
 });
 
 const form = useForm({
+    role: props.agent.role,
     name: props.agent.name,
     email: props.agent.email,
     password: "",
@@ -69,6 +71,20 @@ const routingNotice = computed(() => {
 
     return null;
 });
+
+/*
+ * Le rôle du propriétaire ne se modifie pas : une entreprise doit
+ * toujours conserver quelqu'un qui détient tous les droits.
+ */
+const isOwner = computed(() => props.agent.role === "owner");
+
+const selectableRoles = computed(() =>
+    props.roles.filter((role) => role.name !== "owner"),
+);
+
+const currentRole = computed(
+    () => props.roles.find((role) => role.name === form.role) ?? null,
+);
 
 const overCapacity = computed(
     () => props.agent.open_tickets > Number(form.max_open_tickets),
@@ -165,6 +181,70 @@ const overCapacity = computed(
                                 class="mt-1 w-full rounded-xl border-line text-sm focus:border-brand-400 focus:ring-brand-400"
                             />
                         </div>
+                    </div>
+                </SurfaceCard>
+
+                <!-- Rôle -->
+
+                <SurfaceCard
+                    title="Rôle"
+                    description="Ce que cette personne a le droit de faire dans votre entreprise."
+                >
+                    <p
+                        v-if="isOwner"
+                        class="rounded-xl bg-canvas-sunken px-4 py-3 text-sm text-night-600"
+                    >
+                        Propriétaire de l'entreprise. Ce rôle détient tous
+                        les droits et ne se modifie pas depuis cet écran :
+                        quelqu'un doit toujours pouvoir tout régler.
+                    </p>
+
+                    <div v-else class="space-y-3">
+                        <label
+                            v-for="role in selectableRoles"
+                            :key="role.name"
+                            class="flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition"
+                            :class="
+                                form.role === role.name
+                                    ? 'border-brand-400 bg-brand-50 ring-1 ring-brand-300'
+                                    : 'border-line hover:bg-canvas-sunken'
+                            "
+                        >
+                            <input
+                                v-model="form.role"
+                                type="radio"
+                                :value="role.name"
+                                class="mt-1 h-4 w-4 border-line-strong text-brand-500 focus:ring-brand-400"
+                            />
+
+                            <span class="min-w-0">
+                                <span
+                                    class="block text-sm font-medium text-night-800"
+                                >
+                                    {{ role.label }}
+                                </span>
+
+                                <span
+                                    class="mt-0.5 block text-xs leading-relaxed text-night-400"
+                                >
+                                    {{ role.description }}
+                                </span>
+                            </span>
+                        </label>
+
+                        <ul
+                            v-if="currentRole?.abilities?.length"
+                            class="mt-4 space-y-1 border-t border-line pt-4"
+                        >
+                            <li
+                                v-for="ability in currentRole.abilities"
+                                :key="ability"
+                                class="flex items-start gap-2 text-xs text-night-500"
+                            >
+                                <span class="mt-0.5 text-emerald-500">✓</span>
+                                {{ ability }}
+                            </li>
+                        </ul>
                     </div>
                 </SurfaceCard>
 

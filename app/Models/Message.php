@@ -8,6 +8,31 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Message extends Model
 {
+    /**
+     * Cloisonnement indirect.
+     *
+     * Un message ne porte pas d'organisation : il appartient à une
+     * conversation, qui elle en porte une. Sans ce scope, une requête
+     * distraite du type « Message::find($id) » lirait le message de
+     * n'importe quelle entreprise.
+     *
+     * Le filtre s'appuie sur la conversation, dont le propre
+     * cloisonnement s'applique alors en cascade : une seule règle à
+     * maintenir plutôt que deux.
+     */
+    protected static function booted(): void
+    {
+        static::addGlobalScope('organization', function ($builder) {
+            $user = \Illuminate\Support\Facades\Auth::user();
+
+            if (!$user || !$user->organization_id || $user->isSuperAdmin()) {
+                return;
+            }
+
+            $builder->whereHas('conversation');
+        });
+    }
+
     use HasFactory;
 
 protected $fillable = [

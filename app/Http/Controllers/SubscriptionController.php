@@ -119,14 +119,51 @@ class SubscriptionController extends Controller
     {
         $organization = $this->organization($request);
 
+        /*
+         * La référence vient du prestataire. CinetPay la nomme
+         * « transaction_id », d'autres « cpm_trans_id » : on accepte les
+         * deux, plus notre propre nom.
+         *
+         * Prendre « le dernier paiement en attente », comme le faisait
+         * la version précédente, était faux : un client qui ouvre deux
+         * onglets, ou qui abandonne un règlement puis en lance un autre,
+         * aurait vu la mauvaise transaction vérifiée — et potentiellement
+         * une formule activée par un paiement qui n'était pas le sien.
+         */
+        $reference = $request->input('transaction_id')
+            ?? $request->input('cpm_trans_id')
+            ?? $request->input('reference');
+
+        if (!$reference) {
+            return redirect()
+                ->route('subscription.index')
+                ->with(
+                    'warning',
+                    'Retour sans référence de transaction. Si vous avez '
+                    . 'réglé, votre formule sera activée automatiquement '
+                    . 'à la confirmation du prestataire.'
+                );
+        }
+
         $payment = Payment::query()
             ->where('organization_id', $organization->id)
-            ->where('status', 'pending')
-            ->latest('id')
+            ->where('reference', $reference)
             ->first();
 
         if (!$payment) {
-            return redirect()->route('subscription.index');
+            return redirect()
+                ->route('subscription.index')
+                ->with('error', 'Transaction introuvable.');
+        }
+
+        /*
+         * Déjà confirmée par la notification serveur, qui arrive
+         * souvent avant le retour du navigateur.
+         */
+        if ($payment->status === 'paid') {
+            return redirect()
+                ->route('subscription.index')
+                ->with('success', 'Paiement reçu, votre formule est active.');
         }
 
         $status = $this->billing->gateway($payment->provider)->verify($payment);
@@ -160,7 +197,7 @@ class SubscriptionController extends Controller
     {
         $user = $request->user();
 
-        abort_unless($user->role === 'owner', 403);
+        abort_unless($user->hasAbility('billing.manage'), 403);
 
         $organization = $user->organization;
 

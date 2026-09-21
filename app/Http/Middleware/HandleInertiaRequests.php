@@ -36,6 +36,17 @@ class HandleInertiaRequests extends Middleware
 
         'auth' => [
             'user' => $user,
+
+            /*
+             * Droits de l'utilisateur, pour que l'interface n'affiche
+             * pas des entrées de menu menant à une erreur 403.
+             */
+            'abilities' => $user
+                ? array_values(array_filter(
+                    array_keys(config('roles.abilities', [])),
+                    fn (string $ability) => $user->hasAbility($ability)
+                ))
+                : [],
         ],
 
         'flash' => [

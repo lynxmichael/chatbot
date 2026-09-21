@@ -19,7 +19,7 @@ class AgentController extends Controller
     private function authorizeOwner(Request $request): void
     {
         abort_unless(
-            $request->user()->role === 'owner',
+            $request->user()->hasAbility('agents.manage'),
             403
         );
     }
@@ -81,6 +81,7 @@ class AgentController extends Controller
             'name' => $agent->name,
             'email' => $agent->email,
             'role' => $agent->role,
+            'role_label' => $agent->roleLabel(),
             'is_active' => (bool) $agent->is_active,
             'is_available' => (bool) ($agent->is_available ?? true),
             'skills' => is_array($agent->skills) ? $agent->skills : [],
@@ -92,6 +93,7 @@ class AgentController extends Controller
         return Inertia::render('Agents/Index', [
             'agents' => $agents,
             'categories' => config('ai.categories', []),
+            'roles' => $this->roles(),
         ]);
     }
 
@@ -182,6 +184,7 @@ class AgentController extends Controller
                 'name' => $agent->name,
                 'email' => $agent->email,
                 'role' => $agent->role,
+                'role_label' => $agent->roleLabel(),
                 'is_active' => (bool) $agent->is_active,
                 'is_available' => (bool) ($agent->is_available ?? true),
                 'skills' => is_array($agent->skills) ? $agent->skills : [],
@@ -229,6 +232,11 @@ class AgentController extends Controller
                 'confirmed',
             ],
 
+            'role' => [
+                'required',
+                Rule::in($this->assignableRoles()),
+            ],
+
             'is_available' => ['required', 'boolean'],
 
             'max_open_tickets' => [
@@ -248,6 +256,16 @@ class AgentController extends Controller
 
         $agent->name = $validated['name'];
         $agent->email = $validated['email'];
+        /*
+         * Le rôle du propriétaire ne se modifie pas depuis cet écran :
+         * une entreprise doit toujours avoir quelqu'un qui détient
+         * tous les droits, faute de quoi plus personne ne peut rien
+         * régler.
+         */
+        if (!$agent->isOwner()) {
+            $agent->role = $validated['role'];
+        }
+
         $agent->is_available = $validated['is_available'];
         $agent->max_open_tickets = $validated['max_open_tickets'];
         $agent->skills = array_values($validated['skills'] ?? []);
@@ -344,5 +362,40 @@ class AgentController extends Controller
                 'success',
                 'Agent supprimé avec succès.'
             );
+    }
+
+    /**
+     * Rôles proposés, avec leur description et ce qu'ils ouvrent.
+     */
+    private function roles(): array
+    {
+        return collect(config('roles.roles', []))
+            ->map(fn (array $role, string $name) => [
+                'name' => $name,
+                'label' => $role['label'] ?? ucfirst($name),
+                'description' => $role['description'] ?? null,
+
+                'abilities' => collect($role['abilities'] ?? [])
+                    ->map(fn (string $ability) => $ability === '*'
+                        ? 'Tous les droits'
+                        : config('roles.abilities.' . $ability, $ability))
+                    ->values()
+                    ->all(),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Rôles attribuables depuis l'interface.
+     *
+     * « owner » en est exclu : il se transmet, il ne se distribue pas.
+     */
+    private function assignableRoles(): array
+    {
+        return array_values(array_diff(
+            array_keys(config('roles.roles', [])),
+            ['owner']
+        ));
     }
 }

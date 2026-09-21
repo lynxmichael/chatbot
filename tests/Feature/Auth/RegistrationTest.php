@@ -8,6 +8,11 @@ test('registration screen can be rendered', function () {
 
 test('new users can register', function () {
     $response = $this->post('/register', [
+        /*
+         * Une inscription crée désormais une entreprise, pas seulement
+         * un compte : son nom est obligatoire.
+         */
+        'company_name' => 'Entreprise de test',
         'name' => 'Test User',
         'email' => 'test@example.com',
         'password' => 'password',

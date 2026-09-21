@@ -62,27 +62,28 @@ const baseNavigation = [
         route: "agents.index",
         pattern: "agents.*",
         icon: "shield",
+        ability: "agents.manage",
     },
     {
         name: "Connaissances",
         route: "knowledge.index",
         pattern: "knowledge.*",
         icon: "book",
-        ownerOnly: true,
+        ability: "knowledge.manage",
     },
     {
         name: "Apparence",
         route: "branding.index",
         pattern: "branding.*",
         icon: "palette",
-        ownerOnly: true,
+        ability: "branding.manage",
     },
     {
         name: "Abonnement",
         route: "subscription.index",
         pattern: "subscription.*",
         icon: "card",
-        ownerOnly: true,
+        ability: "billing.manage",
     },
     {
         name: "Plateforme",
@@ -96,7 +97,7 @@ const baseNavigation = [
         route: "autopilot.index",
         pattern: "autopilot.*",
         icon: "spark",
-        ownerOnly: true,
+        ability: "autopilot.manage",
     },
 ];
 
@@ -108,12 +109,22 @@ const baseNavigation = [
 const navigation = computed(() => {
     const user = page.props.auth?.user;
 
+    const abilities = page.props.auth?.abilities ?? [];
+
     return baseNavigation.filter((item) => {
         if (item.adminOnly) {
             return Boolean(user?.is_super_admin);
         }
 
-        return !item.ownerOnly || user?.role === "owner";
+        /*
+         * Filtrage par droit et non par rôle : ajouter un rôle dans
+         * config/roles.php suffit, le menu s'adapte tout seul.
+         */
+        if (item.ability) {
+            return abilities.includes(item.ability);
+        }
+
+        return true;
     });
 });
 

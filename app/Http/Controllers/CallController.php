@@ -8,6 +8,7 @@ use App\Models\Conversation;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use App\Notifications\NewIncomingCall;
 use Inertia\Response;
@@ -19,6 +20,7 @@ class CallController extends Controller
         $user = $request->user();
 
         $calls = Call::query()
+            ->visibleTo($user)
             ->where('organization_id', $user->organization_id)
             ->with([
                 'client:id,first_name,last_name,email,phone',
@@ -121,7 +123,7 @@ class CallController extends Controller
             'conversation_id' => ['nullable', 'integer'],
             'user_id' => ['nullable', 'integer'],
             'type' => ['required', 'in:incoming,outgoing'],
-            'status' => ['required', 'in:answered,missed,busy,failed,cancelled'],
+            'status' => ['required', Rule::in(Call::MANUAL_STATUSES)],
             'phone' => ['required', 'string', 'max:30'],
             'duration' => ['nullable', 'integer', 'min:0'],
             'reason' => ['nullable', 'string', 'max:255'],
@@ -150,7 +152,7 @@ class CallController extends Controller
 
         $assignedUserId = $user->id;
 
-        if ($user->role === 'owner' && !empty($validated['user_id'])) {
+        if ($user->hasAbility('records.assign') && !empty($validated['user_id'])) {
             $assignedUser = User::query()
                 ->where('organization_id', $organizationId)
                 ->whereIn('role', ['owner', 'agent'])
@@ -269,7 +271,7 @@ class CallController extends Controller
             'conversation_id' => ['nullable', 'integer'],
             'user_id' => ['nullable', 'integer'],
             'type' => ['required', 'in:incoming,outgoing'],
-            'status' => ['required', 'in:answered,missed,busy,failed,cancelled'],
+            'status' => ['required', Rule::in(Call::MANUAL_STATUSES)],
             'phone' => ['required', 'string', 'max:30'],
             'duration' => ['nullable', 'integer', 'min:0'],
             'reason' => ['nullable', 'string', 'max:255'],
@@ -340,19 +342,15 @@ class CallController extends Controller
             ->with('success', 'Appel supprimé avec succès.');
     }
 
+    /**
+     * Même règle que les conversations et les tickets.
+     *
+     * La version précédente était plus stricte : elle refusait aussi
+     * les appels sans agent, qu'un agent doit pourtant pouvoir
+     * reprendre. Et elle ne tenait pas compte du mode « team ».
+     */
     private function authorizeCall(Request $request, Call $call): void
     {
-        $user = $request->user();
-
-        if ($call->organization_id !== $user->organization_id) {
-            abort(403);
-        }
-
-        if (
-            $user->role === 'agent'
-            && $call->user_id !== $user->id
-        ) {
-            abort(403);
-        }
+        abort_unless($call->isVisibleTo($request->user()), 403);
     }
 }

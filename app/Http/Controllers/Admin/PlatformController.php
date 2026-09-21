@@ -11,6 +11,7 @@ use App\Models\Subscription;
 use App\Models\User;
 use App\Services\AI\Usage\UsageMeter;
 use App\Services\Billing\Billing;
+use App\Services\OrganizationProvisioner;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -102,7 +103,61 @@ class PlatformController extends Controller
             ],
 
             'currency' => config('ai.billing.currency', 'XOF'),
+
+            'plans' => array_keys(config('ai.plans', [])),
         ]);
+    }
+
+    /**
+     * Crée une entreprise cliente et son propriétaire.
+     *
+     * Sert à l'accueil d'un client que vous inscrivez vous-même, après
+     * une démonstration ou un accord commercial, plutôt que de lui
+     * demander de passer par le formulaire public.
+     */
+    public function storeOrganization(
+        Request $request,
+        OrganizationProvisioner $provisioner
+    ) {
+        $validated = $request->validate([
+            'company_name' => ['required', 'string', 'max:120'],
+            'owner_name' => ['required', 'string', 'max:120'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'password' => ['required', 'string', 'min:8'],
+
+            'plan' => [
+                'nullable',
+                Rule::in(array_keys(config('ai.plans', []))),
+            ],
+        ]);
+
+        $created = $provisioner->create(
+            companyName: $validated['company_name'],
+            ownerName: $validated['owner_name'],
+            email: $validated['email'],
+            password: $validated['password'],
+            phone: $validated['phone'] ?? null,
+        );
+
+        /*
+         * Une formule autre que gratuite est posée directement : c'est
+         * le cas d'un client qui a déjà réglé, ou d'un essai accordé.
+         */
+        if (!empty($validated['plan']) && $validated['plan'] !== 'free') {
+            $this->billing->applyPlan(
+                $created['organization'],
+                $validated['plan']
+            );
+        }
+
+        return back()->with(
+            'success',
+            $created['organization']->name . ' est créée. '
+            . 'Communiquez à ' . $validated['email']
+            . ' son mot de passe provisoire : il pourra le changer '
+            . 'depuis son profil.'
+        );
     }
 
     /**

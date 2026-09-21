@@ -1,71 +1,69 @@
-# Photos dans la base de connaissances
+# Pourquoi l'assistant refusait d'envoyer des photos
 
 ## Installation
 
 ```bash
 php artisan migrate
-php artisan storage:link
 php artisan config:clear
 php artisan queue:restart
 npm run build
+php artisan test
 ```
 
-**146 tests, 332 assertions.**
+**`queue:restart` est indispensable** : le worker garde l'ancien prompt
+en mémoire.
 
-## Comment ça marche
+**197 tests, 532 assertions.**
 
-Les photos se rattachent à une fiche, jamais à l'assistant directement.
-On ouvre une fiche — « Chambre Deluxe vue mer », « Attiéké poisson » —
-et on y ajoute ses photos avec une légende.
+## Le diagnostic
 
-Ensuite, quand un client écrit « je peux voir les chambres ? » :
+Deux défauts se cumulaient.
 
-1. l'assistant cherche dans les fiches ;
-2. la recherche lui annonce les photos disponibles, avec leurs
-   identifiants et leurs légendes ;
-3. il choisit les bonnes et les envoie ;
-4. le client les voit sous la réponse, cliquables pour les agrandir.
+**Une liste d'outils figée.** Quand la page Autopilot est enregistrée,
+elle stockait la liste des outils cochés à cet instant. Cette liste
+était un réglage propre à l'entreprise — et les réglages propres
+passent devant la formule.
 
-**L'assistant ne peut envoyer que des identifiants retournés par une
-recherche.** C'est ce qui garantit qu'un client demandant une chambre ne
-reçoit jamais la photo d'un plat, ni celle d'une autre entreprise.
+Conséquence : votre page avait été enregistrée avant que l'envoi de
+photos existe. Votre liste ne le contenait pas, et passer en Business
+ne changeait rien puisque la liste figée l'emportait.
 
-## Les garde-fous
+**Une limite inventée.** Privé de l'outil, l'assistant a comblé le vide
+en affirmant « il m'est impossible d'afficher des images depuis cette
+fenêtre ». C'est faux, et c'est le genre de phrase qui fait perdre un
+client.
 
-Vérifiés par des tests, parce qu'une photo envoyée au mauvais client ne
-se rattrape pas :
+## La correction
 
-| Situation | Comportement |
-|-----------|--------------|
-| Photo d'une autre entreprise | refusée |
-| Fiche désactivée (offre terminée) | refusée |
-| Au téléphone | refusée, avec consigne de décrire à l'oral |
-| Plus de quatre photos | tronqué à quatre |
-| Identifiant inventé | refusé |
+**On stocke ce qui est coupé, plus ce qui est permis.**
 
-La limite de quatre est délibérée : au-delà, la conversation devient un
-catalogue illisible sur un téléphone.
+- la formule fixe le plafond : ce que l'entreprise a payé ;
+- l'entreprise coupe ensuite ce qu'elle ne veut pas.
 
-## La légende compte
+Un outil ajouté plus tard arrive donc actif, et monter en gamme
+débloque réellement ce qu'on paie.
 
-C'est elle que l'assistant lit pour choisir. « Chambre Deluxe, lit king
-size, vue mer » lui permet de répondre juste à « vous avez des chambres
-avec vue ? ». Une photo sans légende porte le titre de sa fiche, ce qui
-est moins précis.
+La migration convertit les listes existantes en conservant les choix
+réels : ce qui avait été volontairement décoché reste coupé, ce qui
+n'existait pas encore arrive actif.
 
-## Une décision commerciale à valider
+**Un outil hors formule est verrouillé** dans la page Autopilot, avec la
+mention « hors formule ». Cocher la case en trichant sur le formulaire
+ne donne rien : le serveur recoupe avec la formule.
 
-J'ai placé `send_images` dans les formules **pro** et **business**,
-pas dans le gratuit.
+**Une consigne interdit d'inventer la limite.** Quand une fiche n'a pas
+de photo, l'assistant dit qu'il n'en a pas encore et décrit avec les
+informations disponibles. Cette consigne n'apparaît que pour les
+entreprises qui ont l'outil, et jamais au téléphone.
 
-Pour un hôtel ou un restaurant, montrer ses chambres et ses plats est
-exactement ce qui fait vendre : c'est un bon argument d'abonnement. Mais
-si tu préfères l'offrir pour rendre la démonstration plus convaincante,
-ajoute `'send_images'` à la liste `allowed_actions` de la formule
-`free`, dans `config/ai.php`.
+## Pour que les photos s'affichent
 
-## Format des photos
+Le code ne suffit pas : **la fiche doit porter des photos**.
 
-JPG, PNG ou WebP, 3 Mo maximum, huit par fiche. Les vignettes sont
-recadrées automatiquement ; une photo horizontale rend mieux qu'une
-verticale dans la conversation.
+1. `/knowledge` → ouvrez la fiche de la chambre vue sur mer ;
+2. section Photos en bas → ajoutez-les avec une légende précise,
+   par exemple « Chambre Deluxe, balcon, vue sur mer » ;
+3. posez de nouveau la question dans le widget.
+
+La légende compte : c'est ce que l'assistant lit pour choisir la bonne
+image.

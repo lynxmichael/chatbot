@@ -149,6 +149,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/payments/{payment}/reject', [PlatformController::class, 'rejectPayment'])
                 ->name('payments.reject');
 
+            Route::post('/organizations', [PlatformController::class, 'storeOrganization'])
+                ->name('organizations.store');
+
             Route::post('/organizations/{organization}/plan', [PlatformController::class, 'changePlan'])
                 ->name('organizations.plan');
 

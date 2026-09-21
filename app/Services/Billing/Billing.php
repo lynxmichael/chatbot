@@ -172,7 +172,15 @@ class Billing
                 'status' => 'active',
                 'amount' => $locked->amount,
                 'currency' => $locked->currency,
-                'starts_at' => now(),
+
+                /*
+                 * La période commence là où la précédente s'arrête, pas
+                 * aujourd'hui. Avec « now() », un renouvellement anticipé
+                 * affichait une période chevauchant l'ancienne : trente
+                 * jours annoncés au lieu des quarante-et-un réellement
+                 * couverts.
+                 */
+                'starts_at' => $start,
                 'ends_at' => $start->copy()->addDays($days),
             ]);
 

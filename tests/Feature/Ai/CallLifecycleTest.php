@@ -167,7 +167,22 @@ it('empêche un agent de toucher à l\'appel d\'une autre organisation', functio
         ->postJson('/api/widget/calls', ['first_name' => 'Client'])
         ->json('call_id');
 
+    /*
+     * 404 et non 403 : le cloisonnement opère dès la résolution du
+     * modèle, donc la ressource n'existe pas du point de vue de cet
+     * utilisateur. C'est préférable à un 403, qui confirmerait
+     * l'existence d'une ressource portant cet identifiant ailleurs.
+     */
     $this->actingAs($intrus)
         ->postJson("/call-desk/{$callId}/accept")
-        ->assertStatus(403);
+        ->assertStatus(404);
+
+    /*
+     * La vérification passe par acrossOrganizations : depuis la session
+     * de l'intrus, l'appel est invisible — ce qui est précisément la
+     * preuve recherchée.
+     */
+    expect(
+        Call::acrossOrganizations()->find($callId)->status
+    )->toBe('ringing');
 });

@@ -133,7 +133,8 @@ const submit = () => {
                 v-model="form.status"
                 class="w-full rounded-lg border border-line-strong px-3 py-2.5 text-sm focus:border-brand-400 focus:ring-2 focus:ring-brand-200"
               >
-                <option value="answered">Répondu</option>
+                <option value="completed">Terminé</option>
+                            <option value="answered">Répondu</option>
                 <option value="missed">Manqué</option>
                 <option value="busy">Occupé</option>
                 <option value="failed">Échec</option>

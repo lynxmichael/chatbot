@@ -102,7 +102,7 @@ class BrandingController extends Controller
     {
         $user = $request->user();
 
-        abort_unless($user->role === 'owner', 403);
+        abort_unless($user->hasAbility('branding.manage'), 403);
 
         $organization = $user->organization;
 

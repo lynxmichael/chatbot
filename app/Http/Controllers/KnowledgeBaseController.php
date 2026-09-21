@@ -22,6 +22,14 @@ use Inertia\Inertia;
  */
 class KnowledgeBaseController extends Controller
 {
+    /**
+     * Photos par fiche.
+     *
+     * Même valeur que la limite d'envoi de l'outil IA : au-delà, la
+     * conversation devient un catalogue.
+     */
+    private const MAX_IMAGES = 8;
+
     public function index(Request $request)
     {
         $user = $this->authorizeOwner($request);
@@ -283,11 +291,31 @@ class KnowledgeBaseController extends Controller
         $this->authorizeEntry($request, $knowledge);
 
         $validated = $request->validate([
-            'images' => ['required', 'array', 'max:8'],
+            'images' => ['required', 'array', 'max:' . self::MAX_IMAGES],
             'images.*' => ['image', 'mimes:png,jpg,jpeg,webp', 'max:3072'],
             'captions' => ['array'],
             'captions.*' => ['nullable', 'string', 'max:150'],
         ]);
+
+        /*
+         * La limite porte sur le total, pas sur l'envoi.
+         *
+         * Le contrôle précédent n'examinait que le lot envoyé : huit
+         * envois d'une image chacun donnaient huit photos, puis seize,
+         * sans jamais rien déclencher.
+         */
+        $existing = $knowledge->images()->count();
+
+        $incoming = count($validated['images']);
+
+        if ($existing + $incoming > self::MAX_IMAGES) {
+            return back()->withErrors([
+                'images' => 'Cette fiche porte déjà ' . $existing
+                    . ' photo(s). Le maximum est de ' . self::MAX_IMAGES
+                    . ', vous pouvez donc en ajouter '
+                    . max(0, self::MAX_IMAGES - $existing) . '.',
+            ]);
+        }
 
         $position = (int) $knowledge->images()->max('position');
 
@@ -470,7 +498,7 @@ class KnowledgeBaseController extends Controller
     {
         $user = $request->user();
 
-        abort_unless($user->role === 'owner', 403);
+        abort_unless($user->hasAbility('knowledge.manage'), 403);
 
         return $user;
     }

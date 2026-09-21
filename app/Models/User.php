@@ -47,6 +47,52 @@ class User extends Authenticatable
     }
 
     /**
+     * Droits accordés par le rôle de cet utilisateur.
+     */
+    public function abilities(): array
+    {
+        $abilities = config('roles.roles.' . $this->role . '.abilities');
+
+        return is_array($abilities) ? $abilities : [];
+    }
+
+    /**
+     * Cet utilisateur dispose-t-il de ce droit ?
+     *
+     * Un administrateur de plateforme passe partout : il exploite le
+     * service et doit pouvoir intervenir chez n'importe quel client.
+     * Le propriétaire d'une entreprise possède « * » : il ne doit
+     * jamais pouvoir être enfermé dehors de chez lui.
+     */
+    public function hasAbility(string $ability): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        $abilities = $this->abilities();
+
+        return in_array('*', $abilities, true)
+            || in_array($ability, $abilities, true);
+    }
+
+    public function isOwner(): bool
+    {
+        return $this->role === 'owner';
+    }
+
+    /**
+     * Libellé lisible du rôle.
+     */
+    public function roleLabel(): string
+    {
+        return config(
+            'roles.roles.' . $this->role . '.label',
+            ucfirst((string) $this->role)
+        );
+    }
+
+    /**
      * Administrateur de la plateforme, au-dessus des organisations.
      *
      * À ne pas confondre avec le rôle « owner », qui désigne le

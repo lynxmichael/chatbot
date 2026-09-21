@@ -17,6 +17,8 @@ const typeLabel = (value) =>
 
 const statusLabel = (value) =>
   ({
+    ringing: 'Sonne',
+    completed: 'Terminé',
     answered: "Répondu",
     missed: "Manqué",
     busy: "Occupé",

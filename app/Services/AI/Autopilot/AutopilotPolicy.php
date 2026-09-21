@@ -107,11 +107,54 @@ class AutopilotPolicy
     /**
      * Liste des outils autorisés par l'organisation.
      */
+    /**
+     * Outils réellement utilisables par l'assistant.
+     *
+     * Deux sources, qui ne jouent pas le même rôle :
+     *
+     * - la formule fixe le plafond : ce que l'entreprise a payé ;
+     * - l'entreprise peut ensuite couper ce qu'elle ne veut pas.
+     *
+     * L'ancienne version stockait une liste d'outils autorisés. Deux
+     * défauts en découlaient : un outil ajouté plus tard n'atteignait
+     * jamais les entreprises ayant déjà enregistré leurs réglages, et
+     * passer à une formule supérieure ne débloquait rien, puisque la
+     * liste enregistrée l'emportait sur la formule.
+     *
+     * On stocke désormais ce qui est coupé, pas ce qui est permis. Un
+     * nouvel outil arrive donc actif, et la formule décide du reste.
+     */
     public function allowedActions(): array
+    {
+        $ceiling = $this->ceiling();
+
+        $disabled = $this->settings['disabled_actions'] ?? [];
+
+        if (!is_array($disabled)) {
+            $disabled = [];
+        }
+
+        return array_values(array_diff($ceiling, $disabled));
+    }
+
+    /**
+     * Outils compris dans la formule.
+     */
+    public function ceiling(): array
     {
         $actions = $this->settings['allowed_actions'] ?? [];
 
-        return is_array($actions) ? $actions : [];
+        return is_array($actions) ? array_values($actions) : [];
+    }
+
+    /**
+     * Outils que l'entreprise a choisi de couper.
+     */
+    public function disabledActions(): array
+    {
+        $disabled = $this->settings['disabled_actions'] ?? [];
+
+        return is_array($disabled) ? array_values($disabled) : [];
     }
 
     /**

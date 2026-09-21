@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToOrganization;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,6 +12,8 @@ use App\Models\Ticket;
 
 class Client extends Model
 {
+    use BelongsToOrganization;
+
     use HasFactory;
 
     protected $fillable = [
@@ -26,10 +30,6 @@ class Client extends Model
         'notes',
     ];
 
-    public function organization(): BelongsTo
-    {
-        return $this->belongsTo(Organization::class);
-    }
 
     public function getFullNameAttribute(): string
     {

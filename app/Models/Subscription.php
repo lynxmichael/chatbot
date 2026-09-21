@@ -2,16 +2,42 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToOrganization;
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Subscription extends Model
 {
+    /**
+     * Tient « active_for » aligné sur le statut.
+     *
+     * Cette colonne porte la contrainte d'unicité en base : elle vaut
+     * l'organisation tant que la souscription est active, NULL ensuite.
+     * Plusieurs NULL cohabitent dans un index unique, une seule valeur
+     * non nulle est admise — c'est ce qui garantit, au niveau du
+     * moteur, qu'une entreprise n'a jamais deux abonnements actifs.
+     *
+     * La maintenir ici plutôt qu'à chaque écriture évite d'avoir à y
+     * penser, et donc de l'oublier.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (self $subscription) {
+            $subscription->active_for = $subscription->status === 'active'
+                ? $subscription->organization_id
+                : null;
+        });
+    }
+
+    use BelongsToOrganization;
+
     protected $fillable = [
         'organization_id',
         'plan',
         'status',
+        'active_for',
         'amount',
         'currency',
         'starts_at',
@@ -29,10 +55,6 @@ class Subscription extends Model
         ];
     }
 
-    public function organization(): BelongsTo
-    {
-        return $this->belongsTo(Organization::class);
-    }
 
     public function payments(): HasMany
     {

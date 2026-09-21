@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from "vue";
-import { Head, Link, router } from "@inertiajs/vue3";
+import { Head, Link, router, useForm } from "@inertiajs/vue3";
 
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import PageHeader from "@/Components/UI/PageHeader.vue";
@@ -11,7 +11,51 @@ const props = defineProps({
     organizations: { type: Array, default: () => [] },
     totals: { type: Object, default: () => ({}) },
     currency: { type: String, default: "XOF" },
+    plans: { type: Array, default: () => ["free", "pro", "business"] },
 });
+
+/*
+|--------------------------------------------------------------------------
+| Accueil d'un nouveau client
+|--------------------------------------------------------------------------
+|
+| Pour inscrire vous-même une entreprise après une démonstration, sans
+| lui demander de passer par le formulaire public.
+|
+*/
+
+const showForm = ref(false);
+
+const form = useForm({
+    company_name: "",
+    owner_name: "",
+    email: "",
+    phone: "",
+    password: "",
+    plan: "free",
+});
+
+/*
+ * Mot de passe provisoire proposé : plus sûr qu'un « motdepasse123 »
+ * saisi à la hâte, et le client le changera depuis son profil.
+ */
+const suggestPassword = () => {
+    const alphabet = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+    form.password = Array.from(
+        { length: 12 },
+        () => alphabet[Math.floor(Math.random() * alphabet.length)],
+    ).join("");
+};
+
+const submit = () =>
+    form.post(route("admin.organizations.store"), {
+        preserveScroll: true,
+        onSuccess: () => {
+            form.reset();
+            showForm.value = false;
+        },
+    });
 
 const money = (amount, currency = props.currency) =>
     new Intl.NumberFormat("fr-FR", {
@@ -90,10 +134,166 @@ const sorted = computed(() =>
                     >
                         Coordonnées
                     </Link>
+
+                    <button
+                        type="button"
+                        class="rounded-xl bg-brand-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-600"
+                        @click="showForm = !showForm"
+                    >
+                        {{ showForm ? "Annuler" : "Nouvelle entreprise" }}
+                    </button>
                 </template>
             </PageHeader>
 
             <FlashMessages />
+
+            <!-- Création d'une entreprise -->
+
+            <SurfaceCard
+                v-if="showForm"
+                title="Nouvelle entreprise"
+                description="Crée l'entreprise, son compte propriétaire et son jeton de widget."
+            >
+                <form class="space-y-4" @submit.prevent="submit">
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <label class="block text-xs font-medium text-night-500">
+                                Nom de l'entreprise
+                            </label>
+                            <input
+                                v-model="form.company_name"
+                                type="text"
+                                required
+                                placeholder="Boutique Awa"
+                                class="mt-1 w-full rounded-xl border-line text-sm focus:border-brand-400 focus:ring-brand-400"
+                            />
+                            <p
+                                v-if="form.errors.company_name"
+                                class="mt-1 text-xs text-rose-600"
+                            >
+                                {{ form.errors.company_name }}
+                            </p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-night-500">
+                                Nom du responsable
+                            </label>
+                            <input
+                                v-model="form.owner_name"
+                                type="text"
+                                required
+                                class="mt-1 w-full rounded-xl border-line text-sm focus:border-brand-400 focus:ring-brand-400"
+                            />
+                            <p
+                                v-if="form.errors.owner_name"
+                                class="mt-1 text-xs text-rose-600"
+                            >
+                                {{ form.errors.owner_name }}
+                            </p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-night-500">
+                                Email de connexion
+                            </label>
+                            <input
+                                v-model="form.email"
+                                type="email"
+                                required
+                                class="mt-1 w-full rounded-xl border-line text-sm focus:border-brand-400 focus:ring-brand-400"
+                            />
+                            <p
+                                v-if="form.errors.email"
+                                class="mt-1 text-xs text-rose-600"
+                            >
+                                {{ form.errors.email }}
+                            </p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-night-500">
+                                Téléphone
+                            </label>
+                            <input
+                                v-model="form.phone"
+                                type="text"
+                                placeholder="+225 07 00 00 00 00"
+                                class="mt-1 w-full rounded-xl border-line text-sm focus:border-brand-400 focus:ring-brand-400"
+                            />
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-night-500">
+                                Mot de passe provisoire
+                            </label>
+
+                            <div class="mt-1 flex gap-2">
+                                <input
+                                    v-model="form.password"
+                                    type="text"
+                                    required
+                                    minlength="8"
+                                    class="w-full rounded-xl border-line font-mono text-sm focus:border-brand-400 focus:ring-brand-400"
+                                />
+
+                                <button
+                                    type="button"
+                                    class="shrink-0 rounded-xl border border-line px-3 text-sm text-night-600 transition hover:bg-canvas-sunken"
+                                    @click="suggestPassword"
+                                >
+                                    Générer
+                                </button>
+                            </div>
+
+                            <p class="mt-1 text-xs text-night-400">
+                                À communiquer au client. Il le changera
+                                depuis son profil.
+                            </p>
+
+                            <p
+                                v-if="form.errors.password"
+                                class="mt-1 text-xs text-rose-600"
+                            >
+                                {{ form.errors.password }}
+                            </p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-night-500">
+                                Formule
+                            </label>
+                            <select
+                                v-model="form.plan"
+                                class="mt-1 w-full rounded-xl border-line text-sm focus:border-brand-400 focus:ring-brand-400"
+                            >
+                                <option
+                                    v-for="plan in plans"
+                                    :key="plan"
+                                    :value="plan"
+                                >
+                                    {{ plan }}
+                                </option>
+                            </select>
+                            <p class="mt-1 text-xs text-night-400">
+                                Une formule payante posée ici n'ouvre
+                                aucun règlement : à réserver aux clients
+                                déjà réglés ou en essai accordé.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button
+                            type="submit"
+                            :disabled="form.processing"
+                            class="rounded-xl bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-50"
+                        >
+                            Créer l'entreprise
+                        </button>
+                    </div>
+                </form>
+            </SurfaceCard>
 
             <!-- Chiffres clés -->
 

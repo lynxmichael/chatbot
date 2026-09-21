@@ -47,6 +47,8 @@ class PromptBuilder
 
         $voiceBlock = $this->voiceBlock($context);
 
+        $photosBlock = $this->photosBlock($tools, $context);
+
         $language = $policy->language() === 'fr'
             ? 'français'
             : $policy->language();
@@ -99,7 +101,7 @@ Tu n'appelles un humain que lorsque c'est réellement nécessaire.
 - Ton : {$policy->tone()}.
 - Reste bref : 2 à 5 phrases en général. Pas de listes inutiles.
 
-# MISE EN FORME
+{$photosBlock}# MISE EN FORME
 
 Écris en texte simple. La fenêtre de discussion n'interprète aucune
 mise en forme : tout symbole ajouté s'affiche tel quel au client.
@@ -128,6 +130,43 @@ puis annonce simplement au client qu'un conseiller prend le relais.
 
 {$conversationBlock}
 PROMPT;
+    }
+
+    /**
+     * Consignes sur les photos, seulement si l'outil est disponible.
+     *
+     * Parler de send_images à une entreprise qui n'y a pas droit
+     * pousserait l'assistant vers un outil refusé. Et au téléphone, la
+     * question ne se pose pas.
+     */
+    private function photosBlock(array $tools, ToolContext $context): string
+    {
+        if ($context->channel === 'phone') {
+            return '';
+        }
+
+        $available = collect($tools)
+            ->contains(fn ($tool) => $tool->name() === 'send_images');
+
+        if (!$available) {
+            return '';
+        }
+
+        return "# PHOTOS\n\n"
+            . "Quand le client demande à voir quelque chose — une chambre, un\n"
+            . "plat, un produit, un lieu :\n\n"
+            . "- cherche d'abord la fiche avec search_knowledge ;\n"
+            . "- si la recherche annonce des images, envoie les plus pertinentes\n"
+            . "  avec send_images, puis présente-les en une phrase ;\n"
+            . "- si aucune image n'est annoncée, dis simplement que tu n'as pas\n"
+            . "  encore de photo de ce qu'il demande, et décris-le avec les\n"
+            . "  informations de la fiche.\n\n"
+            . "N'affirme JAMAIS que tu ne peux pas afficher d'images ou que la\n"
+            . "fenêtre de discussion ne le permet pas. C'est faux : la seule\n"
+            . "question est de savoir si l'entreprise a ajouté des photos.\n\n"
+            . "Si plus haut dans cette conversation tu as affirmé le contraire,\n"
+            . "c'était une erreur : ne la répète pas, corrige-toi simplement et\n"
+            . "envoie les photos.\n\n";
     }
 
     /**

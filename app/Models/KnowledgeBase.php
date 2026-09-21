@@ -2,11 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToOrganization;
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class KnowledgeBase extends Model
 {
+    use BelongsToOrganization;
+
     protected $fillable = [
         'organization_id',
         'title',
@@ -19,10 +23,6 @@ class KnowledgeBase extends Model
         'is_active' => 'boolean',
     ];
 
-    public function organization(): BelongsTo
-    {
-        return $this->belongsTo(Organization::class);
-    }
 
     /**
      * Photos illustrant cette fiche.

@@ -32,11 +32,20 @@ class AutopilotController extends Controller
 
         $policy = AutopilotPolicy::forOrganization($organization);
 
+        $ceiling = $policy->ceiling();
+
         $tools = collect($this->registry->all())
             ->map(fn ($tool) => [
                 'name' => $tool->name(),
                 'description' => $tool->description(),
                 'is_write' => $tool->isWrite(),
+
+                /*
+                 * « included » : compris dans la formule. Un outil hors
+                 * formule s'affiche verrouillé, avec la formule qui
+                 * l'ouvre — c'est aussi l'argument pour monter en gamme.
+                 */
+                'included' => in_array($tool->name(), $ceiling, true),
                 'enabled' => in_array($tool->name(), $policy->allowedActions(), true),
                 'decision' => $policy->decide($tool),
             ])
@@ -105,22 +114,36 @@ class AutopilotController extends Controller
         ]);
 
         /*
-         * Seuls les outils réellement existants sont conservés :
-         * une valeur inventée côté client n'a aucun effet.
+         * Le formulaire envoie les outils cochés ; on enregistre ceux
+         * qui sont décochés, pris dans la formule. Ainsi :
+         *
+         * - un outil ajouté plus tard arrive actif ;
+         * - un outil hors formule ne peut pas être activé en trichant
+         *   sur le formulaire, puisqu'il n'est pas dans le plafond.
          */
-        $known = array_keys($this->registry->all());
+        $ceiling = AutopilotPolicy::forOrganization($organization)->ceiling();
 
-        $validated['allowed_actions'] = array_values(
-            array_intersect($validated['allowed_actions'] ?? [], $known)
-        );
+        $checked = $validated['allowed_actions'] ?? [];
+
+        $disabled = array_values(array_diff($ceiling, $checked));
+
+        unset($validated['allowed_actions']);
+
+        $settings = is_array($organization->ai_settings)
+            ? $organization->ai_settings
+            : [];
+
+        /*
+         * L'ancienne liste figée disparaît : elle l'emportait sur la
+         * formule et bloquait tout nouvel outil.
+         */
+        unset($settings['allowed_actions']);
 
         $organization->update([
             'ai_settings' => array_merge(
-                is_array($organization->ai_settings) ? $organization->ai_settings : [],
-                array_filter(
-                    $validated,
-                    fn ($value) => $value !== null
-                )
+                $settings,
+                array_filter($validated, fn ($value) => $value !== null),
+                ['disabled_actions' => $disabled]
             ),
         ]);
 
@@ -308,7 +331,7 @@ class AutopilotController extends Controller
     {
         $user = $request->user();
 
-        abort_unless($user->role === 'owner', 403);
+        abort_unless($user->hasAbility('autopilot.manage'), 403);
 
         $organization = $user->organization;
 
@@ -321,7 +344,7 @@ class AutopilotController extends Controller
     {
         $user = $request->user();
 
-        abort_unless($user->role === 'owner', 403);
+        abort_unless($user->hasAbility('autopilot.manage'), 403);
 
         abort_unless(
             $action->organization_id === $user->organization_id,

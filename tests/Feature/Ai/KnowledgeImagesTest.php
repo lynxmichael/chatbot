@@ -227,9 +227,19 @@ it('empêche de toucher aux photos d\'une autre entreprise', function () {
 
     [, $image] = makeEntryWithImage($autre, 'Privé', 'Privé');
 
+    /*
+     * 404 et non 403 : le cloisonnement opère dès la résolution du
+     * modèle, donc la ressource n'existe pas du point de vue de cet
+     * utilisateur. C'est préférable à un 403, qui confirmerait
+     * l'existence d'une ressource portant cet identifiant ailleurs.
+     */
     $this->actingAs($owner)
         ->delete("/knowledge/images/{$image->id}")
-        ->assertStatus(403);
+        ->assertStatus(404);
 
-    expect(KnowledgeImage::count())->toBe(1);
+    /*
+     * Le comptage sort du cloisonnement : sous la session du
+     * demandeur, cette photo n'existe pas.
+     */
+    expect(KnowledgeImage::acrossOrganizations()->count())->toBe(1);
 });

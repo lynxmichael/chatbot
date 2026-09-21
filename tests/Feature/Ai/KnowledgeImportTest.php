@@ -109,13 +109,19 @@ it('ne laisse pas modifier la fiche d\'une autre organisation', function () {
         'is_active' => true,
     ]);
 
+    /*
+     * 404 et non 403 : le cloisonnement opère dès la résolution du
+     * modèle, donc la ressource n'existe pas du point de vue de cet
+     * utilisateur. C'est préférable à un 403, qui confirmerait
+     * l'existence d'une ressource portant cet identifiant ailleurs.
+     */
     $this->actingAs($owner)
         ->put("/knowledge/{$fiche->id}", [
             'title' => 'Détournée',
             'content' => 'Modifié.',
             'is_active' => true,
         ])
-        ->assertStatus(403);
+        ->assertStatus(404);
 
     expect($fiche->fresh()->title)->toBe('Fiche privée');
 });

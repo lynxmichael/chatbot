@@ -3,6 +3,7 @@
 namespace App\Services\AI\Tools;
 
 use App\Models\KnowledgeBase;
+use App\Services\AI\Support\KnowledgeSearch;
 use Illuminate\Support\Str;
 
 class SearchKnowledgeTool implements Tool
@@ -73,43 +74,10 @@ class SearchKnowledgeTool implements Tool
         }
 
         /*
-         * Scoring simple par mots-clés : on privilégie les fiches
-         * qui contiennent le plus de termes de la recherche.
-         *
-         * Le titre pèse plus lourd que le contenu.
+         * La recherche compare des mots entiers et lit aussi les
+         * légendes des photos. Voir KnowledgeSearch pour le détail.
          */
-        $terms = collect(
-            preg_split('/[^\p{L}\p{N}]+/u', Str::lower($query), -1, PREG_SPLIT_NO_EMPTY)
-        )
-            ->filter(fn ($term) => mb_strlen($term) >= 3)
-            ->unique()
-            ->values();
-
-        $scored = $entries->map(function (KnowledgeBase $entry) use ($terms) {
-            $title = Str::lower($entry->title);
-
-            $content = Str::lower($entry->content);
-
-            $score = 0;
-
-            foreach ($terms as $term) {
-                if (str_contains($title, $term)) {
-                    $score += 3;
-                }
-
-                $score += min(3, substr_count($content, $term));
-            }
-
-            return [
-                'entry' => $entry,
-                'score' => $score,
-            ];
-        });
-
-        $matches = $scored
-            ->filter(fn ($row) => $row['score'] > 0)
-            ->sortByDesc('score')
-            ->take(4);
+        $matches = app(KnowledgeSearch::class)->search($entries, $query);
 
         /*
          * Aucune correspondance : on renvoie les titres disponibles

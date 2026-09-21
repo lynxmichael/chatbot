@@ -373,10 +373,16 @@ const showAdvanced = ref(false);
                                 <label
                                     v-for="tool in readTools"
                                     :key="tool.name"
-                                    class="flex cursor-pointer items-start gap-3 rounded-xl border border-line px-4 py-3 transition hover:bg-canvas-sunken"
+                                    class="flex items-start gap-3 rounded-xl border border-line px-4 py-3 transition"
+                                    :class="
+                                        tool.included
+                                            ? 'cursor-pointer hover:bg-canvas-sunken'
+                                            : 'cursor-not-allowed bg-canvas-sunken opacity-60'
+                                    "
                                 >
                                     <input
                                         type="checkbox"
+                                        :disabled="!tool.included"
                                         class="mt-0.5 h-4 w-4 rounded border-line-strong text-brand-500 focus:ring-brand-400"
                                         :checked="
                                             form.allowed_actions.includes(
@@ -387,9 +393,19 @@ const showAdvanced = ref(false);
                                     />
                                     <span class="min-w-0">
                                         <span
-                                            class="block font-mono text-sm text-night-800"
+                                            class="flex flex-wrap items-center gap-2"
                                         >
-                                            {{ tool.name }}
+                                            <span
+                                                class="font-mono text-sm text-night-800"
+                                            >
+                                                {{ tool.name }}
+                                            </span>
+                                            <span
+                                                v-if="!tool.included"
+                                                class="rounded-md bg-night-100 px-1.5 py-0.5 text-[11px] font-semibold text-night-600"
+                                            >
+                                                hors formule
+                                            </span>
                                         </span>
                                         <span
                                             class="mt-0.5 block text-xs leading-relaxed text-night-400"
@@ -412,10 +428,16 @@ const showAdvanced = ref(false);
                                 <label
                                     v-for="tool in writeTools"
                                     :key="tool.name"
-                                    class="flex cursor-pointer items-start gap-3 rounded-xl border border-line px-4 py-3 transition hover:bg-canvas-sunken"
+                                    class="flex items-start gap-3 rounded-xl border border-line px-4 py-3 transition"
+                                    :class="
+                                        tool.included
+                                            ? 'cursor-pointer hover:bg-canvas-sunken'
+                                            : 'cursor-not-allowed bg-canvas-sunken opacity-60'
+                                    "
                                 >
                                     <input
                                         type="checkbox"
+                                        :disabled="!tool.included"
                                         class="mt-0.5 h-4 w-4 rounded border-line-strong text-brand-500 focus:ring-brand-400"
                                         :checked="
                                             form.allowed_actions.includes(
@@ -441,6 +463,12 @@ const showAdvanced = ref(false);
                                                 class="rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-semibold text-amber-800"
                                             >
                                                 soumis à validation
+                                            </span>
+                                            <span
+                                                v-if="!tool.included"
+                                                class="rounded-md bg-night-100 px-1.5 py-0.5 text-[11px] font-semibold text-night-600"
+                                            >
+                                                hors formule
                                             </span>
                                         </span>
                                         <span

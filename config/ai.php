@@ -43,6 +43,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Champ de vision d'un agent
+    |--------------------------------------------------------------------------
+    |
+    | « own »  : un agent ne voit que ses dossiers, plus ceux que
+    |            personne n'a pris. Le mode par défaut.
+    |
+    | « team » : tout le monde voit tout. Adapté à une petite équipe qui
+    |            se relaie.
+    |
+    | Le non-attribué reste visible dans les deux cas : sans cela, une
+    | demande sans responsable serait invisible de tous.
+    |
+    | Réglable par entreprise dans ai_settings.visibility.
+    |
+    */
+
+    'visibility' => env('AI_VISIBILITY', 'own'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Durée maximale de réflexion à l'écrit
     |--------------------------------------------------------------------------
     |

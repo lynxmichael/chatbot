@@ -18,15 +18,40 @@ class TicketController extends Controller
      * Vérifie que l'utilisateur est authentifié
      * et que le ticket appartient à son organisation.
      */
+    /**
+     * Qui a le droit d'attribuer un ticket, et à qui.
+     *
+     * Un responsable répartit le travail dans son entreprise. Un agent
+     * ne peut que prendre un dossier pour lui : la règle est la même
+     * que pour les conversations, où l'on ne voit que ses propres
+     * dossiers.
+     */
+    private function assertMayAssign(User $user, int $targetId): void
+    {
+        if ($user->hasAbility('records.assign')) {
+            return;
+        }
+
+        abort_unless(
+            $targetId === $user->id,
+            403,
+            'Seul un responsable peut attribuer un ticket à un autre agent.'
+        );
+    }
+
     private function authorizeTicket(Request $request, Ticket $ticket): void
     {
         $user = $request->user();
 
-        abort_unless(
-            $user &&
-            $ticket->organization_id === $user->organization_id,
-            403
-        );
+        abort_unless($user, 403);
+
+        /*
+         * Deux niveaux : l'entreprise, puis l'agent. Un agent n'ouvre
+         * que ses tickets et ceux que personne n'a pris — même règle
+         * que la liste, pour ne pas afficher une ligne qu'on ne peut
+         * pas ouvrir.
+         */
+        abort_unless($ticket->isVisibleTo($user), 403);
     }
 
     /**
@@ -45,13 +70,21 @@ class TicketController extends Controller
      * Vérifie qu'une action nécessite au minimum
      * un owner ou un agent actif.
      */
+    /**
+     * Traiter un ticket est ouvert à toute l'équipe.
+     *
+     * La liste des rôles était écrite en dur ici, ce qui excluait
+     * silencieusement tout rôle créé ensuite — un superviseur ne
+     * pouvait même pas répondre à un ticket. Le contrôle porte
+     * désormais sur l'appartenance à l'entreprise et le compte actif ;
+     * ce que chacun a le droit de faire ensuite relève des droits.
+     */
     private function authorizeTicketManagement(Request $request): User
     {
         $user = $this->authorizeUser($request);
 
         abort_unless(
-            in_array($user->role, ['owner', 'agent'], true) &&
-            $user->is_active,
+            $user->organization_id && $user->is_active,
             403
         );
 
@@ -61,13 +94,15 @@ class TicketController extends Controller
     /**
      * Vérifie que l'utilisateur est owner.
      */
+    /**
+     * Actions réservées à l'encadrement : suppression, réattribution.
+     */
     private function authorizeOwner(Request $request): User
     {
         $user = $this->authorizeUser($request);
 
         abort_unless(
-            $user->role === 'owner' &&
-            $user->is_active,
+            $user->hasAbility('records.assign') && $user->is_active,
             403
         );
 
@@ -83,6 +118,7 @@ class TicketController extends Controller
 
         $query = Ticket::query()
             ->where('organization_id', $user->organization_id)
+            ->visibleTo($user)
             ->with([
                 'client:id,first_name,last_name,email,phone',
                 'assignedAgent:id,name,email,role',
@@ -217,8 +253,16 @@ class TicketController extends Controller
         |--------------------------------------------------------------------------
         */
 
+        /*
+         * Les compteurs comptent ce que l'utilisateur a le droit de
+         * voir. Sans « visibleTo », un agent lisait « 47 tickets
+         * ouverts » au-dessus d'une liste qui en montrait trois : un
+         * chiffre inutilisable, et une fuite sur l'activité des
+         * collègues.
+         */
         $baseStatsQuery = Ticket::query()
-            ->where('organization_id', $user->organization_id);
+            ->where('organization_id', $user->organization_id)
+            ->visibleTo($user);
 
         $statistics = [
             'total' => (clone $baseStatsQuery)->count(),
@@ -481,6 +525,17 @@ class TicketController extends Controller
                 ->exists();
 
             abort_unless($agentExists, 403);
+
+            /*
+             * Un agent ne peut attribuer qu'à lui-même.
+             *
+             * Le contrôle précédent vérifiait seulement que la cible
+             * existait dans l'entreprise : n'importe quel agent pouvait
+             * donc se décharger d'un dossier sur un collègue, ou
+             * s'approprier celui d'un autre. Seul un responsable
+             * répartit le travail.
+             */
+            $this->assertMayAssign($user, (int) $validated['assigned_to']);
         }
 
         /*
@@ -902,6 +957,8 @@ class TicketController extends Controller
                 ->exists();
 
             abort_unless($agentExists, 403);
+
+            $this->assertMayAssign($user, (int) $validated['assigned_to']);
         }
 
         /*

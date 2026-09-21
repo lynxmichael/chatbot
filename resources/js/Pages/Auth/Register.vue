@@ -7,8 +7,10 @@ import TextInput from '@/Components/TextInput.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 
 const form = useForm({
+    company_name: '',
     name: '',
     email: '',
+    phone: '',
     password: '',
     password_confirmation: '',
 });
@@ -26,7 +28,23 @@ const submit = () => {
 
         <form @submit.prevent="submit">
             <div>
-                <InputLabel for="name" value="Name" />
+                <InputLabel for="company_name" value="Nom de votre entreprise" />
+
+                <TextInput
+                    id="company_name"
+                    type="text"
+                    class="mt-1 block w-full"
+                    v-model="form.company_name"
+                    required
+                    autofocus
+                    placeholder="MAKOR Telecom"
+                />
+
+                <InputError class="mt-2" :message="form.errors.company_name" />
+            </div>
+
+            <div class="mt-4">
+                <InputLabel for="name" value="Votre nom" />
 
                 <TextInput
                     id="name"
@@ -34,7 +52,6 @@ const submit = () => {
                     class="mt-1 block w-full"
                     v-model="form.name"
                     required
-                    autofocus
                     autocomplete="name"
                 />
 
@@ -54,6 +71,20 @@ const submit = () => {
                 />
 
                 <InputError class="mt-2" :message="form.errors.email" />
+            </div>
+
+            <div class="mt-4">
+                <InputLabel for="phone" value="Téléphone (facultatif)" />
+
+                <TextInput
+                    id="phone"
+                    type="text"
+                    class="mt-1 block w-full"
+                    v-model="form.phone"
+                    placeholder="+225 07 00 00 00 00"
+                />
+
+                <InputError class="mt-2" :message="form.errors.phone" />
             </div>
 
             <div class="mt-4">
