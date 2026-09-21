@@ -34,6 +34,17 @@ class HandleInertiaRequests extends Middleware
     return [
         ...parent::share($request),
 
+        /*
+         * Nom du produit, pour que les pages publiques affichent la
+         * marque et non celle du framework. Si APP_NAME a gardé sa
+         * valeur d'installation, on retombe sur le vrai nom.
+         */
+        'app' => [
+            'name' => config('app.name') === 'Laravel'
+                ? 'AI Service Client'
+                : config('app.name'),
+        ],
+
         'auth' => [
             'user' => $user,
 

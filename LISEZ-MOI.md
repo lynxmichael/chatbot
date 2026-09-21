@@ -1,69 +1,89 @@
-# Pourquoi l'assistant refusait d'envoyer des photos
+# Une IA plus rapide
 
 ## Installation
 
 ```bash
-php artisan migrate
 php artisan config:clear
 php artisan queue:restart
-npm run build
 php artisan test
 ```
 
-**`queue:restart` est indispensable** : le worker garde l'ancien prompt
-en mémoire.
+**`queue:restart` est indispensable.** Sans lui, le worker continue avec
+l'ancien code et rien ne change.
 
-**197 tests, 532 assertions.**
+Rechargez aussi la page du widget en vidant le cache (Ctrl+Maj+R) :
+`widget.js` a changé.
 
-## Le diagnostic
+**232 tests, 631 assertions.**
 
-Deux défauts se cumulaient.
+## D'où venaient les 26 secondes
 
-**Une liste d'outils figée.** Quand la page Autopilot est enregistrée,
-elle stockait la liste des outils cochés à cet instant. Cette liste
-était un réglage propre à l'entreprise — et les réglages propres
-passent devant la formule.
+Chaque message déclenchait trois à quatre appels successifs au modèle,
+chacun de plusieurs secondes :
 
-Conséquence : votre page avait été enregistrée avant que l'envoi de
-photos existe. Votre liste ne le contenait pas, et passer en Business
-ne changeait rien puisque la liste figée l'emportait.
+1. chercher dans les fiches ;
+2. envoyer les photos, le cas échéant ;
+3. **enregistrer l'analyse de la conversation** — imposé par le prompt ;
+4. rédiger la réponse.
 
-**Une limite inventée.** Privé de l'outil, l'assistant a comblé le vide
-en affirmant « il m'est impossible d'afficher des images depuis cette
-fenêtre ». C'est faux, et c'est le genre de phrase qui fait perdre un
-client.
+Chaque appel renvoyait les mêmes 4 000 jetons d'instructions, sans
+cache. Puis le widget attendait jusqu'à trois secondes avant de
+récupérer la réponse, sans rien afficher.
 
-## La correction
+## Ce qui change
 
-**On stocke ce qui est coupé, plus ce qui est permis.**
+| | Avant | Maintenant |
+|---|---|---|
+| Question courante | 3 appels | **1 appel** |
+| Demande de photos | 4 appels | **2 appels** |
+| Instructions | relues à chaque appel | en cache |
+| Attente affichée | fenêtre immobile | « en train d'écrire » |
+| Détection d'une réponse | toutes les 3 s | chaque seconde |
 
-- la formule fixe le plafond : ce que l'entreprise a payé ;
-- l'entreprise coupe ensuite ce qu'elle ne veut pas.
+**La recherche se fait avant d'interroger le modèle.** Elle est locale
+et quasi instantanée : ses résultats sont transmis d'emblée. Pour une
+question courante, le modèle répond dès le premier appel. Les photos
+trouvées lui sont annoncées avec leurs identifiants, il peut les envoyer
+sans chercher d'abord. L'outil de recherche reste à sa disposition s'il
+doit reformuler.
 
-Un outil ajouté plus tard arrive donc actif, et monter en gamme
-débloque réellement ce qu'on paie.
+**L'analyse part en arrière-plan.** Intention, sentiment, résumé : ces
+données ne servent qu'à la supervision et au dossier des agents. Le
+client n'a pas à les attendre. Elles sont calculées après la réponse,
+par un modèle plus petit et plus rapide.
 
-La migration convertit les listes existantes en conservant les choix
-réels : ce qui avait été volontairement décoché reste coupé, ce qui
-n'existait pas encore arrive actif.
+**Les instructions sont mises en cache** chez Anthropic. Relues en
+cache, elles sont traitées nettement plus vite et coûtent environ dix
+fois moins. L'heure affichée à l'assistant est arrondie à l'heure : à la
+minute près, elle invalidait le cache chaque minute.
 
-**Un outil hors formule est verrouillé** dans la page Autopilot, avec la
-mention « hors formule ». Cocher la case en trichant sur le formulaire
-ne donne rien : le serveur recoupe avec la formule.
+**Le widget montre qu'on s'occupe du client** dès l'envoi, et vérifie
+chaque seconde tant qu'une réponse est attendue.
 
-**Une consigne interdit d'inventer la limite.** Quand une fiche n'a pas
-de photo, l'assistant dit qu'il n'en a pas encore et décrit avec les
-informations disponibles. Cette consigne n'apparaît que pour les
-entreprises qui ont l'outil, et jamais au téléphone.
+## Vérifier le gain
 
-## Pour que les photos s'affichent
+Chaque réponse inscrit désormais son chronométrage dans
+`storage/logs/laravel.log` :
 
-Le code ne suffit pas : **la fiche doit porter des photos**.
+```
+Réponse IA produite. {"total_seconds":4.2,"calls":1,
+  "timings":[{"step":1,"seconds":4.2,"tools":[],"cached_tokens":3850}]}
+```
 
-1. `/knowledge` → ouvrez la fiche de la chambre vue sur mer ;
-2. section Photos en bas → ajoutez-les avec une légende précise,
-   par exemple « Chambre Deluxe, balcon, vue sur mer » ;
-3. posez de nouveau la question dans le widget.
+- `calls` doit valoir 1 pour une question simple ;
+- `cached_tokens` supérieur à zéro confirme que le cache fonctionne —
+  il sera à zéro au tout premier message, puis rempli ensuite.
 
-La légende compte : c'est ce que l'assistant lit pour choisir la bonne
-image.
+## Pour aller plus loin
+
+Le modèle lui-même reste le poste le plus lourd. Dans `.env` :
+
+```env
+ANTHROPIC_MODEL=claude-sonnet-4-6
+AI_ANALYSIS_MODEL=claude-haiku-4-5-20251001
+```
+
+Un modèle plus petit pour les réponses irait plus vite encore, au prix
+d'une compréhension moins fine des demandes complexes. Mesurez avec le
+journal avant de trancher : sur des questions simples, l'écart de
+qualité est souvent invisible.

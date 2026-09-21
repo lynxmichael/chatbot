@@ -187,6 +187,17 @@ class ProcessIncomingMessage implements ShouldQueue
         }
 
         /*
+         * Analyse de la conversation, après coup : elle ne sert qu'à la
+         * supervision et au dossier des agents, le client n'a pas à
+         * l'attendre. Légèrement différée pour ne pas concurrencer le
+         * message suivant du client.
+         */
+        if (!$result->isDraft) {
+            AnalyzeConversation::dispatch($conversation->id)
+                ->delay(now()->addSeconds(5));
+        }
+
+        /*
          * Notifications envoyées hors transaction, une fois
          * les écritures confirmées.
          */

@@ -25,14 +25,41 @@ use Inertia\Inertia;
 |--------------------------------------------------------------------------
 */
 
+/*
+|--------------------------------------------------------------------------
+| Page d'accueil
+|--------------------------------------------------------------------------
+|
+| La vitrine du produit. Elle remplace la page de démonstration de
+| Laravel, qui affichait son logo, les liens vers sa documentation et
+| les versions de PHP — autrement dit, rien qui parle au client.
+|
+| Un utilisateur déjà connecté n'a rien à y faire : il est envoyé
+| directement sur sa console.
+|
+*/
+
 Route::get('/', function () {
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+
+    $currency = config('ai.billing.currency', 'XOF');
+
     return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
+
+        'plans' => collect(config('ai.plans', []))
+            ->map(fn (array $plan, string $name) => [
+                'name' => $name,
+                'label' => $plan['label'] ?? ucfirst($name),
+                'price' => (int) ($plan['price'] ?? 0),
+                'pitch' => $plan['pitch'] ?? null,
+                'currency' => $currency,
+            ])
+            ->values(),
     ]);
-});
+})->name('home');
 
 /*
 |--------------------------------------------------------------------------

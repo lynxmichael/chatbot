@@ -77,7 +77,12 @@ class SearchKnowledgeTool implements Tool
          * La recherche compare des mots entiers et lit aussi les
          * légendes des photos. Voir KnowledgeSearch pour le détail.
          */
-        $matches = app(KnowledgeSearch::class)->search($entries, $query);
+        /*
+         * Trois fiches, pas quatre : chaque caractère renvoyé au modèle
+         * allonge le temps avant qu'il commence à répondre. Au-delà de
+         * trois, la quatrième fiche est rarement celle qui sert.
+         */
+        $matches = app(KnowledgeSearch::class)->search($entries, $query, 3);
 
         /*
          * Aucune correspondance : on renvoie les titres disponibles
@@ -108,7 +113,7 @@ class SearchKnowledgeTool implements Tool
                     $result = [
                         'title' => $entry->title,
                         'category' => $entry->category,
-                        'content' => Str::limit($entry->content, 2000),
+                        'content' => Str::limit($entry->content, 1500),
                     ];
 
                     /*

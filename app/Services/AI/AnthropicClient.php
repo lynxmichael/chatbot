@@ -35,7 +35,24 @@ class AnthropicClient implements LlmClient
             'temperature' => (float) ($options['temperature']
                 ?? config('ai.temperature')),
 
-            'system' => $system,
+            /*
+             * Mise en cache des instructions.
+             *
+             * Les instructions et la liste des outils sont identiques
+             * d'un appel à l'autre au sein d'un même échange, et souvent
+             * d'un message au suivant. Marquées ainsi, elles ne sont
+             * traitées qu'une fois : les appels suivants les relisent en
+             * cache, nettement plus vite et pour environ un dixième du
+             * prix. Le cache couvre tout ce qui précède le marqueur,
+             * donc les outils aussi.
+             */
+            'system' => [
+                [
+                    'type' => 'text',
+                    'text' => $system,
+                    'cache_control' => ['type' => 'ephemeral'],
+                ],
+            ],
 
             'messages' => $messages,
         ];
@@ -118,6 +135,13 @@ class AnthropicClient implements LlmClient
             'usage' => [
                 'input_tokens' => $body['usage']['input_tokens'] ?? 0,
                 'output_tokens' => $body['usage']['output_tokens'] ?? 0,
+
+                /*
+                 * Jetons relus en cache : le chiffre qui dit si la mise
+                 * en cache fonctionne réellement.
+                 */
+                'cache_read_input_tokens' => $body['usage']['cache_read_input_tokens'] ?? 0,
+                'cache_creation_input_tokens' => $body['usage']['cache_creation_input_tokens'] ?? 0,
             ],
         ];
     }

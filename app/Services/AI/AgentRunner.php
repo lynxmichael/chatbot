@@ -55,10 +55,79 @@ class AgentRunner
             channel: $message->channel ?: $conversation->channel ?: 'widget',
         );
 
-        return $this->run(
-            $this->historyFor($conversation, $message),
-            $context
-        );
+        $messages = $this->historyFor($conversation, $message);
+
+        /*
+         * Recherche préalable.
+         *
+         * Le modèle commençait chaque échange par un appel à
+         * search_knowledge, puis attendait le résultat, puis répondait :
+         * deux allers-retours au minimum, trois ou quatre avec les
+         * photos. Chaque aller-retour coûte plusieurs secondes.
+         *
+         * La recherche est locale et quasi instantanée. On la fait donc
+         * avant d'interroger le modèle, et on lui transmet directement
+         * ce qu'elle a trouvé. Pour une question courante, il peut
+         * répondre dès le premier appel. L'outil reste disponible s'il
+         * a besoin de reformuler.
+         */
+        $prefetched = $this->prefetchKnowledge($message, $context);
+
+        if ($prefetched !== '') {
+            $messages = self::appendUserTurn($messages, $prefetched);
+        }
+
+        return $this->run($messages, $context);
+    }
+
+    /**
+     * Fiches pertinentes, mises en forme pour le modèle.
+     */
+    private function prefetchKnowledge(Message $message, ToolContext $context): string
+    {
+        $allowed = $context->policy->allowedActions();
+
+        if (!in_array('search_knowledge', $allowed, true)) {
+            return '';
+        }
+
+        $query = trim((string) $message->content);
+
+        if (mb_strlen($query) < 3) {
+            return '';
+        }
+
+        $result = app(\App\Services\AI\Tools\SearchKnowledgeTool::class)
+            ->handle(['query' => $query], $context);
+
+        if (!($result['found'] ?? false)) {
+            return '';
+        }
+
+        $lines = [
+            '[INFORMATIONS TROUVÉES DANS LES FICHES — utilise-les pour '
+            . 'répondre directement si elles suffisent. Ce bloc n\'est pas '
+            . 'écrit par le client.]',
+        ];
+
+        foreach ($result['results'] as $entry) {
+            $lines[] = '';
+            $lines[] = '## ' . $entry['title'];
+            $lines[] = $entry['content'];
+
+            /*
+             * Les photos sont annoncées avec leurs identifiants : le
+             * modèle peut appeler send_images immédiatement, sans
+             * passer d'abord par une recherche.
+             */
+            if (!empty($entry['images'])) {
+                $lines[] = 'Photos disponibles : ' . collect($entry['images'])
+                    ->map(fn ($image) => '#' . $image['id'] . ' « ' . $image['caption'] . ' »')
+                    ->implode(', ');
+            }
+        }
+
+        return implode("\n", $lines);
     }
 
     /**
@@ -70,7 +139,17 @@ class AgentRunner
     {
         $policy = $context->policy;
 
-        $tools = $this->registry->enabledFor($policy->allowedActions());
+        /*
+         * L'analyse de la conversation se fait désormais en arrière-plan
+         * (AnalyzeConversation). Proposer encore record_insights au
+         * modèle l'inciterait à l'appeler à chaque message — sa
+         * description l'y invite — et chaque appel coûte un aller-retour
+         * complet pendant que le client attend.
+         */
+        $tools = array_values(array_filter(
+            $this->registry->enabledFor($policy->allowedActions()),
+            fn ($tool) => $tool->name() !== 'record_insights'
+        ));
 
         $system = $this->prompts->build($context, $tools);
 
@@ -109,6 +188,8 @@ class AgentRunner
 
         $outOfTime = false;
 
+        $timings = [];
+
         for ($step = 0; $step < $maxSteps; $step++) {
             $steps = $step + 1;
 
@@ -136,11 +217,20 @@ class AgentRunner
                 break;
             }
 
+            $callStartedAt = microtime(true);
+
             $response = $this->llm->converse(
                 $system,
                 $messages,
                 $schemas
             );
+
+            $timings[] = [
+                'step' => $steps,
+                'seconds' => round(microtime(true) - $callStartedAt, 2),
+                'tools' => array_column($response['tool_calls'] ?? [], 'name'),
+                'cached_tokens' => $response['usage']['cache_read_input_tokens'] ?? 0,
+            ];
 
             $usage['input_tokens'] += $response['usage']['input_tokens'] ?? 0;
 
@@ -201,6 +291,22 @@ class AgentRunner
                 $outOfTime
             );
         }
+
+        /*
+         * Durée de chaque appel au modèle, dans le journal. C'est ce
+         * qui permet de savoir où passe le temps plutôt que de le
+         * deviner.
+         */
+        Log::info(
+            'Réponse IA produite.',
+            [
+                'organization_id' => $context->organization->id,
+                'channel' => $context->channel,
+                'total_seconds' => round(microtime(true) - $startedAt, 2),
+                'calls' => count($timings),
+                'timings' => $timings,
+            ]
+        );
 
         return new AgentResult(
             reply: $this->toPlainText($reply),

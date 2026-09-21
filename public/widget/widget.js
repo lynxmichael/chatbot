@@ -1166,6 +1166,8 @@
                 message
             );
 
+            expectReply();
+
         } catch (error) {
             console.error(
                 '[AI Widget] Erreur envoi message:',
@@ -1344,6 +1346,13 @@
                         message.sender_type ===
                         'ai'
                     ) {
+                        /*
+                         * L'indicateur doit disparaître AVANT l'ajout :
+                         * sinon la réponse s'afficherait au-dessus des
+                         * trois points encore animés.
+                         */
+                        replyReceived();
+
                         addMessage(
                             'ai',
                             message.content,
@@ -1355,6 +1364,8 @@
                         message.sender_type ===
                         'agent'
                     ) {
+                        replyReceived();
+
                         addMessage(
                             'agent',
                             message.content,
@@ -1408,25 +1419,103 @@
     |--------------------------------------------------------------------------
     */
 
-    function startPolling() {
-        if (pollingTimer) {
-            clearInterval(
-                pollingTimer
-            );
+    /*
+    |--------------------------------------------------------------------------
+    | Attente d'une réponse
+    |--------------------------------------------------------------------------
+    |
+    | Deux changements qui ne rendent pas l'IA plus rapide, mais la font
+    | paraître bien plus rapide :
+    |
+    | - un indicateur « en train d'écrire » dès l'envoi : le client sait
+    |   qu'on s'occupe de lui, au lieu de fixer une fenêtre immobile ;
+    |
+    | - un sondage à la seconde tant qu'une réponse est attendue, puis
+    |   espacé ensuite. À trois secondes d'intervalle, une réponse prête
+    |   pouvait rester invisible jusqu'à trois secondes de plus.
+    |
+    */
+
+    const FAST_POLL = 1000;
+    const IDLE_POLL = 4000;
+
+    let awaitingReply = false;
+    let awaitingSince = 0;
+
+    function showTyping() {
+        const messages = document.getElementById('ai-widget-messages');
+
+        if (!messages || document.getElementById('ai-widget-typing')) {
+            return;
         }
 
+        const typing = document.createElement('div');
+
+        typing.id = 'ai-widget-typing';
+        typing.className = 'ai-widget-typing';
+        typing.setAttribute('aria-label', 'Réponse en cours de rédaction');
+        typing.innerHTML = '<span></span><span></span><span></span>';
+
+        messages.appendChild(typing);
+        messages.scrollTop = messages.scrollHeight;
+    }
+
+    function hideTyping() {
+        const typing = document.getElementById('ai-widget-typing');
+
+        if (typing) {
+            typing.remove();
+        }
+    }
+
+    function expectReply() {
+        awaitingReply = true;
+        awaitingSince = Date.now();
+
+        showTyping();
+        schedulePolling(FAST_POLL);
+    }
+
+    function replyReceived() {
+        if (!awaitingReply) {
+            return;
+        }
+
+        awaitingReply = false;
+
+        hideTyping();
+        schedulePolling(IDLE_POLL);
+    }
+
+    function schedulePolling(interval) {
+        if (pollingTimer) {
+            clearInterval(pollingTimer);
+        }
+
+        pollingTimer = setInterval(function () {
+            /*
+             * Au-delà d'une minute sans réponse, on cesse de s'agiter :
+             * soit un agent a pris le relais, soit quelque chose ne va
+             * pas, et l'indicateur deviendrait trompeur.
+             */
+            if (awaitingReply && Date.now() - awaitingSince > 60000) {
+                awaitingReply = false;
+                hideTyping();
+                schedulePolling(IDLE_POLL);
+                return;
+            }
+
+            loadMessages();
+        }, interval);
+    }
+
+    function startPolling() {
         /*
         * Première récupération immédiate.
         */
         loadMessages();
 
-        /*
-        * Puis toutes les 3 secondes.
-        */
-        pollingTimer = setInterval(
-            loadMessages,
-            3000
-        );
+        schedulePolling(awaitingReply ? FAST_POLL : IDLE_POLL);
     }
 
     /*
@@ -1529,6 +1618,13 @@
                         message.sender_type ===
                         'ai'
                     ) {
+                        /*
+                         * L'indicateur doit disparaître AVANT l'ajout :
+                         * sinon la réponse s'afficherait au-dessus des
+                         * trois points encore animés.
+                         */
+                        replyReceived();
+
                         addMessage(
                             'ai',
                             message.content,
@@ -1540,6 +1636,8 @@
                         message.sender_type ===
                         'agent'
                     ) {
+                        replyReceived();
+
                         addMessage(
                             'agent',
                             message.content,

@@ -7,7 +7,11 @@
         {{-- Requis par les appels fetch du poste téléphonique --}}
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title inertia>{{ config('app.name', 'Laravel') }}</title>
+        {{--
+            Titre de repli. APP_NAME vaut « Laravel » après installation :
+            on ne l'affiche jamais tel quel.
+        --}}
+        <title inertia>{{ config('app.name') === 'Laravel' ? 'AI Service Client' : config('app.name') }}</title>
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">

@@ -14,6 +14,19 @@ return [
 
     'max_tokens' => (int) env('AI_MAX_TOKENS', 2048),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Modèle d'analyse
+    |--------------------------------------------------------------------------
+    |
+    | Sert à l'analyse des conversations en arrière-plan : intention,
+    | sentiment, résumé. Un modèle plus petit et plus rapide suffit
+    | largement à cette tâche, et coûte nettement moins.
+    |
+    */
+
+    'analysis_model' => env('AI_ANALYSIS_MODEL', 'claude-haiku-4-5-20251001'),
+
     'temperature' => (float) env('AI_TEMPERATURE', 0.2),
 
     'timeout' => (int) env('AI_TIMEOUT', 60),

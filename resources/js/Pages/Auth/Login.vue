@@ -31,15 +31,24 @@ const submit = () => {
 
 <template>
     <GuestLayout>
-        <Head title="Log in" />
+        <Head title="Connexion" />
 
-        <div v-if="status" class="mb-4 text-sm font-medium text-green-600">
+        <div class="mb-6">
+            <h1 class="text-2xl font-semibold tracking-tight text-night-900">
+                Bon retour
+            </h1>
+            <p class="mt-1 text-sm text-night-400">
+                Connectez-vous à la console de votre service client.
+            </p>
+        </div>
+
+        <div v-if="status" class="mb-4 text-sm font-medium text-emerald-600">
             {{ status }}
         </div>
 
         <form @submit.prevent="submit">
             <div>
-                <InputLabel for="email" value="Email" />
+                <InputLabel for="email" value="Adresse email" />
 
                 <TextInput
                     id="email"
@@ -55,7 +64,7 @@ const submit = () => {
             </div>
 
             <div class="mt-4">
-                <InputLabel for="password" value="Password" />
+                <InputLabel for="password" value="Mot de passe" />
 
                 <TextInput
                     id="password"
@@ -72,8 +81,8 @@ const submit = () => {
             <div class="mt-4 block">
                 <label class="flex items-center">
                     <Checkbox name="remember" v-model:checked="form.remember" />
-                    <span class="ms-2 text-sm text-gray-600"
-                        >Remember me</span
+                    <span class="ms-2 text-sm text-night-500"
+                        >Se souvenir de moi</span
                     >
                 </label>
             </div>
@@ -82,9 +91,9 @@ const submit = () => {
                 <Link
                     v-if="canResetPassword"
                     :href="route('password.request')"
-                    class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                    class="rounded-md text-sm text-night-500 underline hover:text-night-900 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2"
                 >
-                    Forgot your password?
+                    Mot de passe oublié ?
                 </Link>
 
                 <PrimaryButton
@@ -92,9 +101,19 @@ const submit = () => {
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                 >
-                    Log in
+                    Se connecter
                 </PrimaryButton>
             </div>
         </form>
+
+        <p class="mt-6 border-t border-line pt-5 text-center text-sm text-night-500">
+            Pas encore de compte ?
+            <Link
+                :href="route('register')"
+                class="font-semibold text-brand-600 hover:text-brand-700"
+            >
+                Essayer gratuitement
+            </Link>
+        </p>
     </GuestLayout>
 </template>
