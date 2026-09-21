@@ -12,7 +12,20 @@ const props = defineProps({
     widget_token: { type: String, required: true },
     widget_url: { type: String, required: true },
     api_url: { type: String, required: true },
+    demo_url: { type: String, default: null },
 });
+
+const demoCopied = ref(false);
+
+const copyDemo = async () => {
+    try {
+        await navigator.clipboard.writeText(props.demo_url);
+        demoCopied.value = true;
+        setTimeout(() => (demoCopied.value = false), 2000);
+    } catch {
+        /* Le lien reste sélectionnable à la main. */
+    }
+};
 
 const form = useForm({
     brand_color: props.branding.brand_color ?? "#4f46e5",
@@ -297,6 +310,35 @@ const copy = async () => {
                                 </p>
                             </div>
                         </div>
+                    </SurfaceCard>
+
+                    <SurfaceCard
+                        v-if="demo_url"
+                        title="Essayer le widget"
+                        description="Sur un site fictif, avec vos réglages réels. Rien à installer."
+                    >
+                        <a
+                            :href="demo_url"
+                            target="_blank"
+                            rel="noopener"
+                            class="block w-full rounded-xl bg-brand-500 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-brand-600"
+                        >
+                            Ouvrir la démonstration
+                        </a>
+
+                        <button
+                            type="button"
+                            class="mt-2 w-full rounded-xl border border-line px-4 py-2 text-sm font-medium text-night-700 transition hover:bg-canvas-sunken"
+                            @click="copyDemo"
+                        >
+                            {{ demoCopied ? "Lien copié" : "Copier le lien" }}
+                        </button>
+
+                        <p class="mt-2 text-xs leading-relaxed text-night-400">
+                            À partager avec votre équipe pour tester. Chaque
+                            message envoyé compte dans votre consommation
+                            du mois.
+                        </p>
                     </SurfaceCard>
 
                     <SurfaceCard title="Installer sur votre site">

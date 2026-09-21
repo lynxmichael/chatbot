@@ -72,6 +72,10 @@ class PlatformController extends Controller
                     'ends_at' => optional($subscription?->ends_at)->toDateString(),
                     'days_remaining' => $subscription?->daysRemaining(),
                     'created_at' => optional($organization->created_at)->toDateString(),
+
+                    'demo_url' => $organization->widget_token
+                        ? route('demo.show', $organization->widget_token)
+                        : null,
                 ];
             });
 

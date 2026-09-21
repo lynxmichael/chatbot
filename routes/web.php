@@ -51,6 +51,21 @@ Route::get('/widget-test', function () {
 
 /*
 |--------------------------------------------------------------------------
+| Démonstration par entreprise
+|--------------------------------------------------------------------------
+|
+| Un lien propre à chaque entreprise pour essayer son widget réel.
+| Public, mais non devinable : il repose sur le jeton du widget.
+|
+*/
+
+Route::get('/demo/{token}', [\App\Http\Controllers\DemoController::class, 'show'])
+    ->where('token', '[A-Za-z0-9]{20,}')
+    ->middleware('throttle:60,1')
+    ->name('demo.show');
+
+/*
+|--------------------------------------------------------------------------
 | Espace authentifié
 |--------------------------------------------------------------------------
 */

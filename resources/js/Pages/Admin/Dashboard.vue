@@ -365,6 +365,17 @@ const sorted = computed(() =>
                                 <p class="text-xs text-night-400">
                                     {{ organization.agents }} agent(s) · depuis
                                     {{ organization.created_at }}
+                                    <template v-if="organization.demo_url">
+                                        ·
+                                        <a
+                                            :href="organization.demo_url"
+                                            target="_blank"
+                                            rel="noopener"
+                                            class="font-medium text-brand-600 hover:underline"
+                                        >
+                                            tester
+                                        </a>
+                                    </template>
                                 </p>
                             </td>
 

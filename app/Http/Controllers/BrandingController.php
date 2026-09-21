@@ -33,6 +33,12 @@ class BrandingController extends Controller
             'widget_token' => $organization->widget_token,
             'widget_url' => url('/widget/widget.js'),
             'api_url' => url('/api'),
+
+            /*
+             * Lien pour essayer le widget sur un site fictif, sans
+             * l'avoir encore installé nulle part.
+             */
+            'demo_url' => route('demo.show', $organization->widget_token),
         ]);
     }
 
